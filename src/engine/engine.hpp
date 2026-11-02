@@ -1,5 +1,5 @@
 #pragma once
-#include "model_config.hpp"
+#include "../model_config.hpp"
 
 struct Vector2D
 {
@@ -9,8 +9,6 @@ struct Vector2D
 using PressureSpace = std::vector<Vector2D>;
 using VelocitySpace = std::vector<Vector2D>;
 using ProgramOutput = std::pair<PressureSpace, VelocitySpace>;
-
-
 
 
 class Engine
@@ -23,4 +21,5 @@ public:
 
 private:
     ModelConfig config_;
-}
+    Grid computation_grid_;
+};
