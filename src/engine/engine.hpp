@@ -1,6 +1,9 @@
 #pragma once
 #include "../model_config.hpp"
 
+#include <vector>
+
+
 struct Vector2D
 {
     double x, y;

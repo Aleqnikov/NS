@@ -2,6 +2,8 @@
 #include <utility>
 
 #include "../model_config.hpp"
+#include "engine.hppx
+
 
 struct SA_params
 {
@@ -18,29 +20,37 @@ struct SA_params
 	double f_w_P;
 };
 
-struct Simple
+struct Fields
 {
-	double d_z_P;
-	double d_r_P;
-	double Theta_f;
-	double p_stroke_P;
-	double F_stroke_f;
-	double u_stroke_z_P;
-	double u_stroke_r_P;
+	double u_z_P, u_r_P;
+	double p_P;
+	double nut_P;
 };
 
-struct Flows
+struct CellGeometry
 {
-	double F_f;
-	double G_z_P;
-	double G_r_P;
-	double rho_z_f;
-	double rho_r_f;
-	double D_e, D_w, D_n, D_s;
-	double a_P, a_E, a_W, a_N, a_S;
+	double R_P;
+	double theta_P;
+	double r_P;
+	double d_P;
+	double delta_theta;
+	double delta_c;
+	double V_P;
+	double sigma_P;
+};
 
-	double b_P;
-}
+struct EdgeGeometry
+{
+	double A_e, A_w, A_n, A_s;
+	double S_z_e, S_r_e;
+	double S_z_w, S_r_w;
+	double S_z_n, S_r_n;
+	double S_z_s, S_r_s;
+
+	// Потоки на гранях
+	double F_e, F_w, F_n, F_s;
+};
+
 
 class Grid
 {
@@ -53,18 +63,14 @@ public:
         Cell(double theta_0, double theta_1, double R_0, double R_1);
         Cell(bool is_boundary);
 
-        double R_P, theta_P;
-        double r_P, d_P, V_P, sigma_P;
-        double A_e, A_w, A_n, A_s;
-
-        Vector2D S_e, S_w, S_n, S_s;
 
         bool is_boundary = false;
 
-        // параметры считаемые динамически
-
+       	Fields fields;
+       	CellGeometry geometry;
+		EdgeGeometry edge_geometry;
+        SA_params sa_params;
     };
-
 
     Grid(ModelConfig config);
 
