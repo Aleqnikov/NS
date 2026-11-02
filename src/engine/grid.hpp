@@ -29,6 +29,12 @@ struct Fields
 
 struct CellGeometry
 {
+
+	CellGeometry(double R_w, double R_e, double theta_s, double theta_n, double R_s);
+
+	double R_w, R_e;
+	double theta_s, theta_n;
+
 	double R_P;
 	double theta_P;
 	double r_P;
@@ -41,6 +47,8 @@ struct CellGeometry
 
 struct EdgeGeometry
 {
+	EdgeGeometry(CellGeometry cell_data);
+
 	double A_e, A_w, A_n, A_s;
 	double S_z_e, S_r_e;
 	double S_z_w, S_r_w;

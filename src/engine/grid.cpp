@@ -1,5 +1,6 @@
 #include "grid.hpp"
 
+#include <iostream>
 
 Grid::Grid(ModelConfig config)
 {
@@ -25,25 +26,37 @@ std::pair<int, int> Grid::get_grid_dimensions()
     return {h_g, w_g};
 }
 
-Grid::Cell::Cell(double theta_0, double theta_1, double R_e, double R_w)
-    : theta_0(theta_0), theta_1(theta_1), R_0(R_0), R_1(R_1)
+
+
+CellGeometry::CellGeometry(double R_w, double R_e, double theta_s, double theta_n, double R_s)
 {
-    R_P = (R_0 - R_1) / 2;
-    theta_P = (theta_1 - theta_0) / 2;
-    double delta_theta = theta_1 - theta_0;
+	R_P = (R_w + R_e) / 2;
+	theta_P = (theta_s  + theta_n) / 2;
+	r_P  = R_P * std::sin(theta_P);
+	d_P = R_P - R_s;
+	delta_theta = theta_n - theta_s;
+	delta_c = std::cos(theta_s) - std::cos(theta_n);
+	V_P = (R_e * R_e * R_e - R_w * R_w * R_w) / 3  * delta_c;
+	sigma_P  = (R_e * R_e - R_w * R_w ) / 2  * delta_theta;
+}
 
-    double delta_c = std::cos(theta_1) - std::cos(theta_0);
+EdgeGeometry::EdgeGeometry(CellGeometry gm)
+{
+	A_e = gm.R_e * gm.R_e * gm.delta_c;
+	A_w = gm.R_w * gm.R_w *  gm.delta_c;
+	A_n = std::sin(gm.theta_n) * (gm.R_e * gm.R_e - gm.R_w * gm.R_w )/ 2;
+	A_s = std:sin(gm.theta_s) * (gm.R_e * gm.R_e - gm.R_w * gm.R_w )/ 2;
 
+	S_z_e = gm.R_e * gm.R_e / 2 * (std::sin(gm.theta_n) * std::sin(gm.theta_n) - std::sin(gm.theta_s) * std::sin(gm.theta_s));
+	S_r_e = gm.R_e * gm.R_e / 2  * (gm.delta_theta - (std::sin(2 * gm.theta_n)  - std::sin(2 * gm.theta_s)) / 2);
 
-    V_P = (R_e * R_e * R_e - R_w * R_w * R_w) / 3 * delta_c;
-    sigma_P = (R_e * R_e - R_w * R_w) / 2 * delta_theta;
+	S_z_w = gm.R_w * gm.R_w / 2 * (std::sin(gm.theta_n) * std::sin(gm.theta_n) - std::sin(gm.theta_s) * std::sin(gm.theta_s));
+	S_r_w = gm.R_w * gm.R_w / 2  * (gm.delta_theta - (std::sin(2 * gm.theta_n)  - std::sin(2 * gm.theta_s)) / 2);
 
-    A_e = R_e * R_e * delta_c;
-    A_w = R_w * R_w * delta_c;
-    A_n = std::sin(theta_1) * (R_e * R_e - R_w * R_w) / 2;
-    A_s = std::sin(theta_2) * (R_e * R_e - R_w * R_w) / 2;
+	S_z_n = - gm.A_n * std::sin(gm.theta_n);
+	S_r_n = gm.A_n * std::cos(gm.theta_n);
 
-    S_n = {- std::sin(theta_n) * A_n, std::cos(theta_n) * A_n};
-    S_s = {- std::sin(theta_s) * A_s, std::cos(theta_s) * A_s};
+	S_z_s = - gm.A_s * std::sin(gm.theta_n);
+	S_r_s = gm.A_s *  std::cos(gm.theta_n);
 
 }
