@@ -12,6 +12,16 @@ struct ModelConfig
     double nut =  4.38e-5;      //  м^2/c
 
 
+    // константы для SA
+    double c_v_1 = 7.1;
+    double c_b_1 = 0.1355;
+    double c_b_2 = 0.622;
+    double k = 0.41;
+    double c_w_2 = 0.3;
+    double c_w_3 = 2;
+    double sigma  = 0.6666666;
+
+
     ModelConfig(double speed, double radius, double density) :
     speed{speed}, radius{radius}, density{density} {};
 };

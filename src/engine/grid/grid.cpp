@@ -72,6 +72,41 @@ Grid::Cell::Cell(bool is_boundary_): is_boundary(is_boundary_)
 {
 }
 
+
+void Grid::Cell::update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfig config)
+{
+
+
+    sa_params.xi_P = fields.nut_P / config.nu;
+    sa_params.f_v1_P = std::pow(sa_params.xi_P, 3) / (std::pow(sa_params.xi_P, 3) + std::pow(config.c_v_1, 3));
+    sa_params.f_v2_P = 1 - sa_params.xi_P / (1 + sa_params.xi_P * sa_params.f_v1_P);
+    sa_params.nu_t_P = fields.nut_P * sa_params.f_v1_P;
+    sa_params.nu_eff_P = config.nu + sa_params.nu_t_P;
+    sa_params.gamma_P = config.nu + fields.nut_P;
+
+    double du_zd_R =  (E.fields.u_z_P - W.fields.u_z_P)/(E.geometry.R_P - W.geometry.R_P);
+    double du_zd_theta = (N.fields.u_r_P - W.fields.u_r_P) / (N.geometry.theta_P - W.geometry.theta_P);
+
+
+    double du_zdr = std::sin(geometry.theta_P) * du_zd_R +
+        std::cos(geometry.theta_P)/geometry.R_P * du_zd_theta;
+
+
+    double du_rd_R =  (E.fields.u_r_P - W.fields.u_r_P)/(E.geometry.R_P - W.geometry.R_P);
+    double du_rd_theta = (N.fields.u_r_P - W.fields.u_r_P) / (N.geometry.theta_P - W.geometry.theta_P);
+
+    double du_r_d_theta = std::cos(geometry.theta_P) * du_rd_R  - std::sin(geometry.theta_P) / geometry.R_P * du_rd_theta;
+
+    sa_params.Omega_P = std::fabs(du_zdr - du_r_d_theta);
+
+    sa_params.S_tilda_P = sa_params.Omega_P + fields.nut_P/(config.k * config.k * (geometry.d_P * geometry.d_P)) * sa_params.f_v2_P;
+
+    sa_params.r_sa_P = std::min(10., fields.nut_P/(config.k * config.k * (geometry.d_P * geometry.d_P) * sa_params.S_tilda_P));
+    sa_params.g_P = sa_params.r_sa_P + config.c_w_2 * (std::pow(sa_params.r_sa_P, 6) - sa_params.r_sa_P);
+    sa_params.f_w_P = sa_params.g_P * std::pow(((1 + std::pow(config.c_w_3, 6))/(std::pow(sa_params.g_P, 6) + std::pow(config.c_w_3, 6))), 1.0/6.0);
+
+}
+
 void Grid::init_boundary_cond()
 {
 
@@ -124,6 +159,7 @@ void Grid::init_boundary_cond()
     }
 }
 
+// Нужно проводить после каждой итерации алгоритма для соблюдения инвариантости.
 void Grid::update_boundary_cells()
 {
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)

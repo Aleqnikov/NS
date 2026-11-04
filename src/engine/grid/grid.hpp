@@ -24,7 +24,7 @@ public:
         Cell(double theta_0_, double theta_1_, double R_0_, double R_1_, double R_s, ModelConfig config, bool is_boundary_);
         Cell(bool is_boundary_);
 
-
+        void update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfig config);
 
         bool is_boundary = false;
 
