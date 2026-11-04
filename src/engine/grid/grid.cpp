@@ -45,6 +45,8 @@ Grid::Grid(ModelConfig config) :
     }
 
     this->init_boundary_cond();
+    this->init_flows();
+    this->update_sa_parameters();
 
 }
 
@@ -125,16 +127,6 @@ void Grid::init_boundary_cond()
         grid_[i][upper].fields.p_P = grid_[i][upper - 1].fields.p_P;
         grid_[i][upper].fields.u_r_P = -grid_[i][upper - 1].fields.u_r_P;
         grid_[i][upper].fields.u_z_P = grid_[i][upper - 1].fields.u_z_P;
-
-        grid_[i][border].edge_geometry.F_e = 0;
-        grid_[i][border].edge_geometry.F_s = 0;
-        grid_[i][border].edge_geometry.F_n = 0;
-        grid_[i][border].edge_geometry.F_w = 0;
-
-        grid_[i][upper].edge_geometry.F_e = 0;
-        grid_[i][upper].edge_geometry.F_s = 0;
-        grid_[i][upper].edge_geometry.F_n = 0;
-        grid_[i][upper].edge_geometry.F_w = 0;
     }
 
 
@@ -151,15 +143,7 @@ void Grid::init_boundary_cond()
         grid_[left][j].fields.u_z_P = -grid_[left + 1][j].fields.u_z_P;
 
 
-        grid_[left][j].edge_geometry.F_e = 0;
-        grid_[left][j].edge_geometry.F_s = 0;
-        grid_[left][j].edge_geometry.F_n = 0;
-        grid_[left][j].edge_geometry.F_w = 0;
 
-        grid_[right][j].edge_geometry.F_e = 0;
-        grid_[right][j].edge_geometry.F_s = 0;
-        grid_[right][j].edge_geometry.F_n = 0;
-        grid_[right][j].edge_geometry.F_w = 0;
 
         if (grid_[right - 1][j].geometry.theta_P > M_PI / 2.0)
         {
@@ -230,5 +214,27 @@ void Grid::Cell::init_flows(Cell E, Cell W, Cell N, Cell S)
     edge_geometry.F_w = edge_geometry.S_z_w / 2 * (fields.u_z_P + W.fields.u_z_P) + edge_geometry.S_r_w / 2 * (fields.u_r_P + W.fields.u_r_P);
     edge_geometry.F_s = edge_geometry.S_z_s / 2 * (fields.u_z_P + S.fields.u_z_P) + edge_geometry.S_r_s / 2 * (fields.u_r_P + S.fields.u_r_P);
     edge_geometry.F_n = edge_geometry.S_z_n / 2 * (fields.u_z_P + N.fields.u_z_P) + edge_geometry.S_r_n / 2 * (fields.u_r_P + N.fields.u_r_P);
+}
+
+void Grid::init_flows()
+{
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            grid_[i][j].init_flows(grid_[i + 1][j], grid_[i - 1][j], grid_[i][j + 1], grid_[i][j - 1]);
+        }
+    }
+}
+
+void Grid::update_sa_parameters()
+{
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            grid_[i][j].update_SA_parameters(grid_[i + 1][j], grid_[i - 1][j], grid_[i][j + 1], grid_[i][j - 1], config_);
+        }
+    }
 }
 

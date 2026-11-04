@@ -40,6 +40,8 @@ public:
     // Проходит по всем ячейкам и обновляет параметры SA считаемые по формулам.
     void update_sa_parameters();
 
+    void init_flows();
+
 
     std::pair<int, int> get_grid_dimensions();
 
