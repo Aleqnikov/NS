@@ -87,7 +87,7 @@ void Grid::Cell::update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfi
     sa_params.gamma_P = config.nu + fields.nut_P;
 
     double du_zd_R =  (E.fields.u_z_P - W.fields.u_z_P)/(E.geometry.R_P - W.geometry.R_P);
-    double du_zd_theta = (N.fields.u_r_P - W.fields.u_r_P) / (N.geometry.theta_P - W.geometry.theta_P);
+    double du_zd_theta = (N.fields.u_z_P - S.fields.u_z_P) /(N.geometry.theta_P - S.geometry.theta_P);
 
 
     double du_zdr = std::sin(geometry.theta_P) * du_zd_R +
@@ -95,7 +95,7 @@ void Grid::Cell::update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfi
 
 
     double du_rd_R =  (E.fields.u_r_P - W.fields.u_r_P)/(E.geometry.R_P - W.geometry.R_P);
-    double du_rd_theta = (N.fields.u_r_P - W.fields.u_r_P) / (N.geometry.theta_P - W.geometry.theta_P);
+    double du_rd_theta = (N.fields.u_r_P - S.fields.u_r_P) /(N.geometry.theta_P - S.geometry.theta_P);
 
     double du_r_d_theta = std::cos(geometry.theta_P) * du_rd_R  - std::sin(geometry.theta_P) / geometry.R_P * du_rd_theta;
 
@@ -111,10 +111,10 @@ void Grid::Cell::update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfi
 
 void Grid::init_boundary_cond()
 {
-
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
         std::size_t border = 0, upper = grid_[i].size() - 1;
+
 
         grid_[i][border] = Cell(true);
         grid_[i][border].fields.nut_P = grid_[i][border + 1].fields.nut_P;
@@ -122,11 +122,17 @@ void Grid::init_boundary_cond()
         grid_[i][border].fields.u_r_P = -grid_[i][border + 1].fields.u_r_P;
         grid_[i][border].fields.u_z_P = grid_[i][border + 1].fields.u_z_P;
 
+        grid_[i][border].geometry.R_P = grid_[i][border + 1].geometry.R_P;
+        grid_[i][border].geometry.theta_P = 2.0 * grid_[i][border + 1].geometry.theta_s  -grid_[i][border + 1].geometry.theta_P;
+        grid_[i][border].geometry.r_P = grid_[i][border].geometry.R_P * std::sin(grid_[i][border].geometry.theta_P);
         grid_[i][upper] = Cell(true);
         grid_[i][upper].fields.nut_P = grid_[i][upper - 1].fields.nut_P;
         grid_[i][upper].fields.p_P = grid_[i][upper - 1].fields.p_P;
         grid_[i][upper].fields.u_r_P = -grid_[i][upper - 1].fields.u_r_P;
         grid_[i][upper].fields.u_z_P = grid_[i][upper - 1].fields.u_z_P;
+        grid_[i][upper].geometry.R_P = grid_[i][upper - 1].geometry.R_P;
+        grid_[i][upper].geometry.theta_P = 2.0 * grid_[i][upper - 1].geometry.theta_n - grid_[i][upper - 1].geometry.theta_P;
+        grid_[i][upper].geometry.r_P = grid_[i][upper].geometry.R_P * std::sin(grid_[i][upper].geometry.theta_P);
     }
 
 
@@ -142,7 +148,12 @@ void Grid::init_boundary_cond()
         grid_[left][j].fields.u_r_P = -grid_[left + 1][j].fields.u_r_P;
         grid_[left][j].fields.u_z_P = -grid_[left + 1][j].fields.u_z_P;
 
-
+        grid_[left][j].geometry.R_P = 2.0 * grid_[left + 1][j].geometry.R_w - grid_[left + 1][j].geometry.R_P;
+        grid_[left][j].geometry.theta_P = grid_[left + 1][j].geometry.theta_P;
+        grid_[left][j].geometry.r_P = grid_[left][j].geometry.R_P * std::sin(grid_[left][j].geometry.theta_P);
+        grid_[right][j].geometry.R_P = 2.0 * grid_[right - 1][j].geometry.R_e - grid_[right - 1][j].geometry.R_P;
+        grid_[right][j].geometry.theta_P = grid_[right - 1][j].geometry.theta_P;
+        grid_[right][j].geometry.r_P = grid_[right][j].geometry.R_P * std::sin(grid_[right][j].geometry.theta_P);
 
 
         if (grid_[right - 1][j].geometry.theta_P > M_PI / 2.0)
@@ -237,4 +248,5 @@ void Grid::update_sa_parameters()
         }
     }
 }
+
 
