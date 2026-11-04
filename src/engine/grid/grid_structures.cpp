@@ -41,3 +41,12 @@ EdgeGeometry::EdgeGeometry(CellGeometry gm)
     S_r_s = A_s *  std::cos(gm.theta_s);
 
 }
+
+
+Fields::Fields(double speed, double nu)
+{
+    u_z_P = speed;
+    u_r_P = 0;
+    p_P = 0;
+    nut_P = 3 * nu;
+}

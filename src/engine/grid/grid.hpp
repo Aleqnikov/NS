@@ -20,7 +20,7 @@ public:
         double R_0, R_1;
 
         Cell() = default;
-        Cell(double theta_0, double theta_1, double R_0, double R_1, double R_s);
+        Cell(double theta_0, double theta_1, double R_0, double R_1, double R_s, ModelConfig config);
         Cell(bool is_boundary);
 
 

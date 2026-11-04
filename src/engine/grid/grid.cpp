@@ -38,7 +38,7 @@ Grid::Grid(ModelConfig config)
             double R_current = GU::get_radius(q, d, config.radius, i);
 
 
-            grid_[i][j] = Cell(theta_current, theta_last, R_current, R_last, config.radius);
+            grid_[i][j] = Cell(theta_current, theta_last, R_current, R_last, config.radius, config);
 
         }
     }
@@ -51,11 +51,12 @@ std::pair<int, int> Grid::get_grid_dimensions()
     return {h_g, w_g};
 }
 
-Grid::Cell::Cell(double theta_0_, double theta_1_, double R_0_, double R_1_, double R_s)
+Grid::Cell::Cell(double theta_0_, double theta_1_, double R_0_, double R_1_, double R_s, ModelConfig config)
     : theta_0(theta_0_), theta_1(theta_1_),
       R_0(R_0_), R_1(R_1_),
       geometry(R_1_, R_0_, theta_1_, theta_0_, R_s),
-      edge_geometry(geometry)
+      edge_geometry(geometry),
+      fields(config.speed, config.nu)
 {}
 
 Grid::Cell::Cell(bool is_boundary_)

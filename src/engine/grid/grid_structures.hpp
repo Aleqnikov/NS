@@ -22,6 +22,9 @@ struct SA_params
 
 struct Fields
 {
+    Fields() = default;
+    Fields(double speed, double nu);
+
     double u_z_P{}, u_r_P{};
     double p_P{};
     double nut_P{};
