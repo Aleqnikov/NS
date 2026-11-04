@@ -2,10 +2,9 @@
 
 
 
-Engine::Engine(ModelConfig config) : config_(config)
+Engine::Engine(ModelConfig config) : config_(config), computation_grid_(config)
 {
-    grid_ = grid(config_);
 
-
+    computation_grid_.print();
 
 }

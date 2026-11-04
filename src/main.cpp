@@ -27,12 +27,8 @@ int main(int argc, char *argv[])
     ModelConfig model_config(speed, radius, mesh_density);
 
     Engine engine(model_config);
-    engine.run();
-    auto results = engine.get_results();
 
-    VTKConvertor vtk_convertor(results);
 
-    vtk_convertor.convert(output_file);
 
 
     return 1;

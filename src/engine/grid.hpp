@@ -2,7 +2,7 @@
 #include <utility>
 
 #include "../model_config.hpp"
-#include "engine.hppx
+#include <vector>
 
 
 struct SA_params
@@ -29,7 +29,7 @@ struct Fields
 
 struct CellGeometry
 {
-
+    CellGeometry() = default;
 	CellGeometry(double R_w, double R_e, double theta_s, double theta_n, double R_s);
 
 	double R_w, R_e;
@@ -47,6 +47,7 @@ struct CellGeometry
 
 struct EdgeGeometry
 {
+    EdgeGeometry() = default;
 	EdgeGeometry(CellGeometry cell_data);
 
 	double A_e, A_w, A_n, A_s;
@@ -68,8 +69,10 @@ public:
         double theta_0, theta_1;
         double R_0, R_1;
 
-        Cell(double theta_0, double theta_1, double R_0, double R_1);
+        Cell() = default;
+        Cell(double theta_0, double theta_1, double R_0, double R_1, double R_s);
         Cell(bool is_boundary);
+
 
 
         bool is_boundary = false;
@@ -84,14 +87,15 @@ public:
 
     void init();
 
+    void print();
+
+
     std::pair<int, int> get_grid_dimensions();
 
 private:
 
-    void init_cells();
-    void init_boundary_conditions(ModelConfig config);
 
     std::vector<std::vector<Cell>> grid_;
 
     int h_g, w_g;
-}
+};
