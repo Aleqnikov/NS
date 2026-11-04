@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <iostream>
-
+#include <iomanip>
 const double PI = 3.14159265358979323846;
 
 
@@ -61,8 +61,8 @@ Grid::Grid(ModelConfig config)
 {
     double height = config.radius * 20;
 
-    int N_R_max = 1000, N_R_min = 100;
-    int N_theta_max = 1500, N_theta_min = 150;
+    int N_R_max = 500, N_R_min = 50;
+    int N_theta_max = 2000, N_theta_min = 500;
 
     int N_R_current  = N_R_min + config.density * (N_R_max - N_R_min);
     int N_theta_current = N_theta_min + config.density * (N_theta_max - N_theta_min);
@@ -81,12 +81,9 @@ Grid::Grid(ModelConfig config)
             double theta_last = get_theta(N_theta_current, j - 1);
             double theta_current = get_theta(N_theta_current, j);
 
-
-
             double R_last = get_radius(q, d, config.radius, i - 1);
             double R_current = get_radius(q, d, config.radius, i);
 
-            std::cout << i << " " << i << std::endl;
 
             grid_[i][j] = Cell(theta_current, theta_last, R_current, R_last, config.radius);
 
@@ -115,6 +112,11 @@ Grid::Cell::Cell(bool is_boundary_)
 
 CellGeometry::CellGeometry(double R_w, double R_e, double theta_s, double theta_n, double R_s)
 {
+    this->R_w = R_w;
+    this->R_e = R_e;
+    this->theta_s = theta_s;
+    this->theta_n = theta_n;
+
 	R_P = (R_w + R_e) / 2;
 	theta_P = (theta_s  + theta_n) / 2;
 	r_P  = R_P * std::sin(theta_P);
@@ -127,6 +129,8 @@ CellGeometry::CellGeometry(double R_w, double R_e, double theta_s, double theta_
 
 EdgeGeometry::EdgeGeometry(CellGeometry gm)
 {
+
+
 	A_e = gm.R_e * gm.R_e * gm.delta_c;
 	A_w = gm.R_w * gm.R_w *  gm.delta_c;
 	A_n = std::sin(gm.theta_n) * (gm.R_e * gm.R_e - gm.R_w * gm.R_w )/ 2;
@@ -141,19 +145,9 @@ EdgeGeometry::EdgeGeometry(CellGeometry gm)
 	S_z_n = - A_n * std::sin(gm.theta_n);
 	S_r_n = A_n * std::cos(gm.theta_n);
 
-	S_z_s = - A_s * std::sin(gm.theta_n);
-	S_r_s = A_s *  std::cos(gm.theta_n);
+	S_z_s = - A_s * std::sin(gm.theta_s);
+	S_r_s = A_s *  std::cos(gm.theta_s);
 
 }
 
 
-void Grid::print()
-{
-    for (std::size_t i = 1; i < grid_.size(); i++)
-    {
-        for (std::size_t j = 1; j < grid_[i].size(); j++)
-        {
-            std::cout << " i j " << i << " " << j << " theta 1 theta2: " << grid_[i][j].theta_1 << " " <<  grid_[i][j].theta_0 << " rad 1 rad 2: " << grid_[i][j].R_0 << " " << grid_[i][j].R_1 << std::endl;
-        }
-    }
-}
