@@ -49,4 +49,5 @@ private:
 
 
     void init_boundary_cond();
+    void update_boundary_cells();
 };
