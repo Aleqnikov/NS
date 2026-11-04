@@ -1,5 +1,6 @@
 #include "grid.hpp"
 
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -10,9 +11,45 @@ namespace
         return std::pi * j / max_density;
     }
 
-    double get_radius(double q, double d_1, double R_s, std::size_t j)
+    double get_radius(double q, double d_1, double R_s, std::size_t i)
     {
         return R_s + d_1 * (std::pow(q, i) - 1) / (q - 1);
+    }
+
+    /** Сетка строится как геометрическая прогрессия. Первая ячейка расположена около шара, последняя
+     * на расстоянии, заданном. Шаг сетки определяется размером самой первой ячейки, а ее размер, как раз таки
+     * зависит от параметров самой системы.
+     */
+    std::pair<double, double> get_progression_parameters(double v, double nu, double r, double r_border, std::size_t N)
+    {
+        double Re = 2 * v * r / nu;
+        double C_f = 0.026 / std::pow(Re, 1/7);
+        double u = v * std::sqrt(C_f / 2);
+        double d = 1 * nu / v;
+
+        // Формулы для выражения q нету, эту величину нужно найти итеративно.
+
+        f = [&](double q)
+        {
+            return d * (std::pow(q, N) - 1) / (q - r ) - (r_border - r);
+        };
+
+        double lo = 1;
+        double hi = 2;
+
+        for (std::size_t i = 1; i <= 10; ++i)
+        {
+            double mid = (lo + hi) / 2;
+
+            if (f(mid) > 0)
+                hi = mid;
+            else
+                lo = mid;
+        }
+
+        double q = (lo + hi) / 2;
+
+        return {d, q};
     }
 
 }
@@ -30,12 +67,8 @@ Grid::Grid(ModelConfig config)
 
     grid_.resize(N_R_current + 2, N_theta_current + 2);
 
+    double q, d = get_progression_parameters(config.speed, config.nu, config.radius, height, N_R_current);
 
-    // Параметры самой сетки
-    // коэфициент роста геометрической прогрессии.
-    const double q = 1.0002;
-
-    double d_1 = 19 * config.radius * (q  - 1) / (std::pow(q, N_R_current - 1) - 1);
     for (std::size_t i = 1; i < N_R_current + 1; ++i)
     {
         for (std::size_t j = 1; j < N_theta_current + 1; ++j)
@@ -43,8 +76,8 @@ Grid::Grid(ModelConfig config)
             double theta_last = get_theta(N_theta_current, j - 1);
             double theta_current = get_theta(N_theta_current, j);
 
-            double R_last = get_radius(q, d_1, config.radius, i - 1);
-            double R_current = get_radius(q, d_1, config.radius, i);
+            double R_last = get_radius(q, d, config.radius, i - 1);
+            double R_current = get_radius(q, d, config.radius, i);
 
             grid_[i][j] = Cell(theta_current, theta_last, R_current, R_last, config.radius);
 
