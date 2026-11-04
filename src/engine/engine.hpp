@@ -1,6 +1,6 @@
 #pragma once
 #include "../model_config.hpp"
-#include "grid.hpp"
+#include "grid/grid.hpp"
 #include <vector>
 
 

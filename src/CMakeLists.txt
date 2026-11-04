@@ -28,7 +28,12 @@ foreach(src IN LISTS SOURCES)
 endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
-add_executable(NS ${SOURCES})
+add_executable(NS ${SOURCES}
+        engine/grid/grid_structures.cpp
+        engine/grid/grid_structures.hpp
+        engine/grid/utils.cpp
+        engine/grid/utils.hpp
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${INCLUDE_DIRS}
