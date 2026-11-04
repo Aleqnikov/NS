@@ -16,6 +16,7 @@ namespace
 
     double get_radius(double q, double d_1, double R_s, std::size_t i)
     {
+
         return R_s + d_1 * (std::pow(q, i) - 1) / (q - 1);
     }
 
@@ -26,21 +27,19 @@ namespace
     std::pair<double, double> get_progression_parameters(double v, double nu, double r, double r_border, std::size_t N)
     {
         double Re = 2 * v * r / nu;
-        double C_f = 0.026 / std::pow(Re, 1/7);
+        double C_f = 0.026 / std::pow(Re, 1.0 / 7.0);
         double u = v * std::sqrt(C_f / 2);
         double d = 1 * nu / v;
 
-        // Формулы для выражения q нету, эту величину нужно найти итеративно.
-
         auto f = [&](double q)
         {
-            return d * (std::pow(q, N) - 1) / (q - r ) - (r_border - r);
+            return d * (std::pow(q, N) - 1) / (q - 1) - (r_border - r);
         };
 
         double lo = 1;
         double hi = 2;
 
-        for (std::size_t i = 1; i <= 10; ++i)
+        for (std::size_t i = 1; i <= 100; ++i)
         {
             double mid = (lo + hi) / 2;
 
@@ -73,7 +72,7 @@ Grid::Grid(ModelConfig config)
         row.resize(N_theta_current + 2);
 
     auto res = get_progression_parameters(config.speed, config.nu, config.radius, height, N_R_current);
-    double q = res.first, d = res.second;
+    double d = res.first, q = res.second;
 
     for (std::size_t i = 1; i < N_R_current + 1; ++i)
     {
@@ -82,8 +81,12 @@ Grid::Grid(ModelConfig config)
             double theta_last = get_theta(N_theta_current, j - 1);
             double theta_current = get_theta(N_theta_current, j);
 
+
+
             double R_last = get_radius(q, d, config.radius, i - 1);
             double R_current = get_radius(q, d, config.radius, i);
+
+            std::cout << i << " " << i << std::endl;
 
             grid_[i][j] = Cell(theta_current, theta_last, R_current, R_last, config.radius);
 
@@ -150,7 +153,7 @@ void Grid::print()
     {
         for (std::size_t j = 1; j < grid_[i].size(); j++)
         {
-            std::cout << " i j " << i << " " << j << " theta 1 theta2" << grid_[i][j].theta_1 << " " <<  grid_[i][j].theta_0 << " rad 1 rad 2" << grid_[i][j].R_0 << " " << grid_[i][j].R_1 << std::endl;
+            std::cout << " i j " << i << " " << j << " theta 1 theta2: " << grid_[i][j].theta_1 << " " <<  grid_[i][j].theta_0 << " rad 1 rad 2: " << grid_[i][j].R_0 << " " << grid_[i][j].R_1 << std::endl;
         }
     }
 }
