@@ -25,6 +25,7 @@ public:
         Cell(bool is_boundary_);
 
         void update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfig config);
+        void init_flows(Cell E, Cell W, Cell N, Cell S);
 
         bool is_boundary = false;
 
@@ -36,7 +37,8 @@ public:
 
     Grid(ModelConfig config);
 
-
+    // Проходит по всем ячейкам и обновляет параметры SA считаемые по формулам.
+    void update_sa_parameters();
 
 
     std::pair<int, int> get_grid_dimensions();

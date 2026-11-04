@@ -125,6 +125,16 @@ void Grid::init_boundary_cond()
         grid_[i][upper].fields.p_P = grid_[i][upper - 1].fields.p_P;
         grid_[i][upper].fields.u_r_P = -grid_[i][upper - 1].fields.u_r_P;
         grid_[i][upper].fields.u_z_P = grid_[i][upper - 1].fields.u_z_P;
+
+        grid_[i][border].edge_geometry.F_e = 0;
+        grid_[i][border].edge_geometry.F_s = 0;
+        grid_[i][border].edge_geometry.F_n = 0;
+        grid_[i][border].edge_geometry.F_w = 0;
+
+        grid_[i][upper].edge_geometry.F_e = 0;
+        grid_[i][upper].edge_geometry.F_s = 0;
+        grid_[i][upper].edge_geometry.F_n = 0;
+        grid_[i][upper].edge_geometry.F_w = 0;
     }
 
 
@@ -135,12 +145,21 @@ void Grid::init_boundary_cond()
         grid_[left][j] = Cell(true);
         grid_[right][j] = Cell(true);
 
-        // Стенка
         grid_[left][j].fields.nut_P = -grid_[left + 1][j].fields.nut_P;
         grid_[left][j].fields.p_P = grid_[left + 1][j].fields.p_P;
         grid_[left][j].fields.u_r_P = -grid_[left + 1][j].fields.u_r_P;
         grid_[left][j].fields.u_z_P = -grid_[left + 1][j].fields.u_z_P;
 
+
+        grid_[left][j].edge_geometry.F_e = 0;
+        grid_[left][j].edge_geometry.F_s = 0;
+        grid_[left][j].edge_geometry.F_n = 0;
+        grid_[left][j].edge_geometry.F_w = 0;
+
+        grid_[right][j].edge_geometry.F_e = 0;
+        grid_[right][j].edge_geometry.F_s = 0;
+        grid_[right][j].edge_geometry.F_n = 0;
+        grid_[right][j].edge_geometry.F_w = 0;
 
         if (grid_[right - 1][j].geometry.theta_P > M_PI / 2.0)
         {
@@ -203,3 +222,13 @@ void Grid::update_boundary_cells()
         }
     }
 }
+
+
+void Grid::Cell::init_flows(Cell E, Cell W, Cell N, Cell S)
+{
+    edge_geometry.F_e = edge_geometry.S_z_e / 2 * (fields.u_z_P + E.fields.u_z_P) + edge_geometry.S_r_e / 2 * (fields.u_r_P + E.fields.u_r_P);
+    edge_geometry.F_w = edge_geometry.S_z_w / 2 * (fields.u_z_P + W.fields.u_z_P) + edge_geometry.S_r_w / 2 * (fields.u_r_P + W.fields.u_r_P);
+    edge_geometry.F_s = edge_geometry.S_z_s / 2 * (fields.u_z_P + S.fields.u_z_P) + edge_geometry.S_r_s / 2 * (fields.u_r_P + S.fields.u_r_P);
+    edge_geometry.F_n = edge_geometry.S_z_n / 2 * (fields.u_z_P + N.fields.u_z_P) + edge_geometry.S_r_n / 2 * (fields.u_r_P + N.fields.u_r_P);
+}
+
