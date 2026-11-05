@@ -33,6 +33,8 @@ add_executable(NS ${SOURCES}
         engine/grid/grid_structures.hpp
         engine/grid/utils.cpp
         engine/grid/utils.hpp
+        engine/solver.cpp
+        engine/solver.hpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
