@@ -61,3 +61,22 @@ struct EdgeGeometry
 
     double F_e{}, F_w{}, F_n{}, F_s{};
 };
+
+
+struct u_z_calculus_parameters
+{
+    double alpha_z_e;
+    double beta_z_e;
+    double alpha_z_w;
+    double beta_z_w;
+    double alpha_z_n;
+    double beta_z_n;
+    double alpha_z_s;
+    double beta_z_s;
+
+    double D_e, D_w, D_n, D_s;
+    double a_E, a_W, a_N, a_S;
+    double a_P;
+    double b_P;
+
+};

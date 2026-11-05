@@ -41,12 +41,14 @@ public:
     void update_sa_parameters();
 
     void init_flows();
-
+    void step_speeds_update();
 
     std::pair<int, int> get_grid_dimensions();
 
-private:
     std::vector<std::vector<Cell>> grid_;
+
+private:
+
     int h_g, w_g;
 
     ModelConfig config_;
