@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-
+#include "solver.hpp"
 #include "utils.hpp"
 
 
@@ -15,8 +15,8 @@ Grid::Grid(ModelConfig config) :
 {
     double height = config.radius * 20;
 
-    int N_R_max = 500, N_R_min = 50;
-    int N_theta_max = 2000, N_theta_min = 100;
+    int N_R_max = 100, N_R_min = 50;
+    int N_theta_max = 100, N_theta_min = 50;
 
     int N_R_current  = N_R_min + config.density * (N_R_max - N_R_min);
     int N_theta_current = N_theta_min + config.density * (N_theta_max - N_theta_min);
@@ -47,6 +47,9 @@ Grid::Grid(ModelConfig config) :
     this->init_boundary_cond();
     this->init_flows();
     this->update_sa_parameters();
+
+    this->step_speeds_update();
+    this->print();
 
 }
 
@@ -357,8 +360,8 @@ void Grid::step_speeds_update()
             double du_rdz_s = S.is_boundary ? du_rdz_P : 0.5*(du_rdz_P + du_rdz_S);
 
 
-            double rho_z_e = nu_e * (beta_z_e * 1/E.geometry.R_P * (du_zdtheta_e) + P.edge_geometry.S_r_e * du_rdz_e);
-            double rho_z_w = nu_w * (beta_z_e * 1/W.geometry.R_P * (du_zdtheta_w) + P.edge_geometry.S_r_w * du_rdz_w);
+            double rho_z_e = nu_e * (beta_z_e * 1/P.geometry.R_e * du_zdtheta_e + P.edge_geometry.S_r_e * du_rdz_e);
+            double rho_z_w = nu_w * (beta_z_w * 1/P.geometry.R_w * du_zdtheta_w + P.edge_geometry.S_r_w * du_rdz_w);
 
             double rho_z_n = nu_n * (alpha_z_n * du_zdR_n + P.edge_geometry.S_r_n * du_rdz_n);
             double rho_z_s = nu_s * (alpha_z_s * du_zdR_s + P.edge_geometry.S_r_s * du_rdz_s);
@@ -408,6 +411,30 @@ void Grid::step_speeds_update()
             }
 
             grid_[i][j].update_SA_parameters(grid_[i + 1][j], grid_[i - 1][j], grid_[i][j + 1], grid_[i][j - 1], config_);
+        }
+    }
+
+
+    std::vector<double> x = GS(A, b, 1e-3);
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+            grid_[i][j].fields.u_z_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
+}
+
+void Grid::print()
+{
+    std::cout << std::scientific;
+    std::cout << std::setprecision(16);
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            std::cout << i << " " << j << std::endl;
+            std::cout << " uzp "  << grid_[i][j].fields.u_z_P << std::endl;
+
+            std::cout << "thetas " << grid_[i][j].geometry.theta_n << " " << grid_[i][j].geometry.theta_s<< std::endl;
+            std::cout << "radii " << grid_[i][j].geometry.R_e << " " << grid_[i][j].geometry.R_w<< std::endl;
         }
     }
 }

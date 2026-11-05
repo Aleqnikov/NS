@@ -42,6 +42,7 @@ public:
 
     void init_flows();
     void step_speeds_update();
+    void print();
 
     std::pair<int, int> get_grid_dimensions();
 
