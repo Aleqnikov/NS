@@ -251,16 +251,14 @@ void Grid::update_sa_parameters()
 
 std::size_t pair_idx_to_uno(std::size_t i, std::size_t j, std::size_t n)
 {
-    // Нужно учесть то, что у нас как бы ни i ни j не должны быть граничными и тп.
-    return i * n + j;
+    return (i - 1) * n + (j - 1);
 }
 
 void Grid::step_speeds_update()
 {
 
-    std::vector<std::vector<double>> A(grid_.size() * grid_.size(), grid_.size() * grid_.size());
-
-    std::vector<double> b(grid_.size() * grid_.size());
+    std::vector<std::vector<double>> A((grid_.size()-2)*(grid_[0].size()-2), std::vector<double>((grid_.size()-2)*(grid_[0].size()-2), 0.0));
+    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -367,21 +365,47 @@ void Grid::step_speeds_update()
 
             double b_P = -G_z_P + rho_z_e - rho_z_w + rho_z_n - rho_z_s;
 
-            std::size_t new_i = pair_idx_to_uno(i, j, grid_.size());
 
-            b[new_i] = b_P;
+            std::size_t row = pair_idx_to_uno(i, j, grid_[0].size() - 2);
 
-            A[new_i][new_i] = a_P;
+            b[row]      = b_P;
+            A[row][row] = a_P;
 
-            std::size_t new_e = pair_idx_to_uno(i + 1, j, grid_.size());
-            std::size_t new_w = pair_idx_to_uno(i - 1, j, grid_.size());
-            std::size_t new_n = pair_idx_to_uno(i, j + 1, grid_.size());
-            std::size_t new_s = pair_idx_to_uno(i, j - 1, grid_.size());
+            if (!E.is_boundary)
+            {
+                A[row][pair_idx_to_uno(i + 1, j, grid_[0].size() - 2)] = -a_E;
+            }
+            else if (P.geometry.theta_P > M_PI / 2.0)
+            {
+                b[row] += a_E * config_.speed;
+            }
+            else
+            {
+                b[row] += a_E * P.fields.u_z_P;
+            }
 
-            if (!E.is_boundary) {A[new_i][new_e] = a_E;}
-            if (!W.is_boundary) {A[new_i][new_w] = a_W;}
-            if (!N.is_boundary) {A[new_i][new_n] = a_N;}
-            if (!S.is_boundary) {A[new_i][new_s] = a_S;}
+            if (!W.is_boundary)
+            {
+                A[row][pair_idx_to_uno(i - 1, j, grid_[0].size() - 2)] = -a_W;
+            }
+
+            if (!N.is_boundary)
+            {
+                A[row][pair_idx_to_uno(i, j + 1, grid_[0].size() - 2)] = -a_N;
+            }
+            else
+            {
+                b[row] += a_N * P.fields.u_z_P;
+            }
+
+            if (!S.is_boundary)
+            {
+                A[row][pair_idx_to_uno(i, j - 1, grid_[0].size() - 2)] = -a_S;
+            }
+            else
+            {
+                b[row] += a_S * P.fields.u_z_P;
+            }
 
             grid_[i][j].update_SA_parameters(grid_[i + 1][j], grid_[i - 1][j], grid_[i][j + 1], grid_[i][j - 1], config_);
         }
