@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# vis_cells.py — ячейки (uzp, urp) + векторное поле скорости в декартовой СК
+# vis_cells.py — ячейки (uzp, urp) + векторное поле скорости + sum flows
 import re
 import sys
 import numpy as np
@@ -19,6 +19,7 @@ PAT = re.compile(
     r'^\s*\d+\s+\d+\s*$'
     r'\s*\n\s*uzp\s+([-+0-9.eE]+)\s*$'
     r'\s*\n\s*urp\s+([-+0-9.eE]+)\s*$'
+    r'\s*\n\s*sum\s+flows\s+([-+0-9.eE]+)\s*$'
     r'\s*\n\s*thetas\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s*$'
     r'\s*\n\s*radii\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)',
     re.MULTILINE,
@@ -29,8 +30,8 @@ def parse_fast(text):
     arr = np.asarray(PAT.findall(text), dtype=float)
     if arr.size == 0:
         raise SystemExit("ничего не распарсилось")
-    uzp, urp, th0, th1, r0, r1 = arr.T
-    return th0, th1, r0, r1, uzp, urp
+    uzp, urp, sum_flows, th0, th1, r0, r1 = arr.T
+    return th0, th1, r0, r1, uzp, urp, sum_flows
 
 
 def build_verts(th0, th1, r0, r1, arc_pts, r_pad):
@@ -73,22 +74,45 @@ def _cells_union_path(th0, th1, r0, r1, arc_pts=2, r_pad=0.0):
                    np.concatenate(all_codes, axis=0))
 
 
-def plot_field(verts, values, name, n_cells, figsize=(10, 10)):
+def plot_field(verts, values, name, n_cells, figsize=(10, 10),
+               cmap="turbo", symmetric=False, cbar_label=None):
     fig, ax = plt.subplots(figsize=figsize)
-    pc = PolyCollection(verts, cmap="turbo",
+    pc = PolyCollection(verts, cmap=cmap,
                         edgecolors="none", antialiased=False)
     pc.set_array(values)
+    if symmetric:
+        vmax = float(np.max(np.abs(values))) if len(values) else 0.0
+        if not np.isfinite(vmax) or vmax == 0.0:
+            vmax = 1.0
+        pc.set_clim(-vmax, vmax)
     ax.add_collection(pc)
     ax.autoscale()
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, ls=":", alpha=0.4)
-    fig.colorbar(pc, ax=ax, label=name)
+    fig.colorbar(pc, ax=ax, label=cbar_label or name)
     ax.set_title(
         f"{name}  |  ячеек: {n_cells:,}  |  "
         f"диапазон ∈ [{values.min():.2e}, {values.max():.2e}]"
     )
     plt.tight_layout()
     return fig
+
+
+def plot_sum_flows(verts, sum_flows, n_cells, figsize=(10, 10)):
+    """
+    4-й рисунок: сумма потоков через грани ячейки
+        S_ij = F_e − F_w + F_n − F_s
+    Знакопеременная величина → расходящаяся палитра с симметричным clim.
+    """
+    return plot_field(
+        verts, sum_flows,
+        name=r"$\Sigma$ flows = $F_e - F_w + F_n - F_s$",
+        n_cells=n_cells,
+        figsize=figsize,
+        cmap="RdBu_r",
+        symmetric=True,
+        cbar_label=r"$F_e - F_w + F_n - F_s$",
+    )
 
 
 def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
@@ -104,12 +128,6 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
                   clip_to_cells=True):
     """
     Модуль скорости |u| = √(uzp²+urp²) в декартовой СК с интерполяцией.
-
-    - Интерполяция |u| на регулярную декартову сетку (griddata, linear→nearest).
-    - Заливка ограничена ОБЪЕДИНЕНИЕМ ячеек через clip_path (по аналогии с рис. 1–2:
-      вне ячеек — пусто, «шар» не закрашивается).
-    - Дополнительно: область ниже y_min маскируется (по умолчанию y_min=0).
-    - Стрелки — только при y ≥ y_min.
     """
     if len(uzp) > max_arrows:
         rng = np.random.default_rng(1)
@@ -172,7 +190,6 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
                 else:
                     ZI = np.where(np.isnan(ZI), Zn, ZI)
 
-            # маска по y_min (по умолчанию полуплоскость y < 0)
             ZI = np.ma.masked_where(YI < y_min, ZI)
 
             vmin = min_u if max_u > min_u else 0.0
@@ -180,7 +197,6 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
                                shading="auto",
                                vmin=vmin, vmax=max_u if max_u > 0 else None)
 
-            # ---- КЛЮЧЕВОЕ: обрезка заливки по объединению ячеек ----
             if clip_to_cells:
                 r_pad_clip = (0.005 * 0.5 * (float(np.mean(r0)) + float(np.mean(r1)))
                               if len(r0) else 0.0)
@@ -193,7 +209,6 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
                          label="|u| = √(uzp² + urp²)  (интерп., только внутри ячеек)")
             interp_done = True
 
-    # ---- контуры ячеек (опционально, только для y >= y_min) ----
     if show_cells_outline:
         sel = y >= y_min
         if np.any(sel):
@@ -206,7 +221,6 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
                                    antialiased=False)
             ax.add_collection(pc_bg)
 
-    # ---- стрелки направления (только для y >= y_min) ----
     if max_u > 0 and show_arrows:
         keep = y >= y_min
         if np.any(keep):
@@ -252,7 +266,7 @@ def plot_velocity(th0, th1, r0, r1, uzp, urp, n_cells,
     return fig
 
 
-def visualize_cells(th0, th1, r0, r1, uzp, urp,
+def visualize_cells(th0, th1, r0, r1, uzp, urp, sum_flows,
                     max_segments=MAX_SEGMENTS,
                     arc_pts=4,
                     r_pad=None,
@@ -268,8 +282,8 @@ def visualize_cells(th0, th1, r0, r1, uzp, urp,
     if N > max_segments:
         rng = np.random.default_rng(0)
         idx = rng.choice(N, max_segments, replace=False)
-        th0, th1, r0, r1, uzp, urp = (
-            a[idx] for a in (th0, th1, r0, r1, uzp, urp)
+        th0, th1, r0, r1, uzp, urp, sum_flows = (
+            a[idx] for a in (th0, th1, r0, r1, uzp, urp, sum_flows)
         )
         N = max_segments
         print(f"даунсэмплировано до {N:,}")
@@ -280,8 +294,11 @@ def visualize_cells(th0, th1, r0, r1, uzp, urp,
 
     verts = build_verts(th0, th1, r0, r1, arc_pts, r_pad)
 
+    # 1) uzp
     plot_field(verts, uzp, "uzp", N)
+    # 2) urp
     plot_field(verts, urp, "urp", N)
+    # 3) модуль скорости + стрелки
     plot_velocity(th0, th1, r0, r1, uzp, urp, N,
                   arrow_frac=arrow_frac,
                   uzp_is_x=uzp_is_x,
@@ -290,6 +307,9 @@ def visualize_cells(th0, th1, r0, r1, uzp, urp,
                   show_arrows=show_arrows,
                   y_min=y_min,
                   clip_to_cells=clip_to_cells)
+    # 4) сумма потоков через грани ячейки
+    plot_sum_flows(verts, sum_flows, N)
+
     plt.show()
 
 
