@@ -33,6 +33,7 @@ public:
        	CellGeometry geometry;
 		EdgeGeometry edge_geometry;
         SA_params sa_params;
+        SpeedResults speed_results;
     };
 
     Grid(ModelConfig config);
@@ -43,6 +44,7 @@ public:
     void init_flows();
     void step_speeds_z_update();
 	void step_speeds_r_update();
+    void step_flows_update();
     void print();
 
     std::pair<int, int> get_grid_dimensions();

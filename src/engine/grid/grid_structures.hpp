@@ -63,6 +63,14 @@ struct EdgeGeometry
 };
 
 
+struct SpeedResults
+{
+    double a_z_P{};
+    double a_r_P{};
+    double G_z_P{};
+    double G_r_P{};
+};
+
 struct u_z_calculus_parameters
 {
     double alpha_z_e;
