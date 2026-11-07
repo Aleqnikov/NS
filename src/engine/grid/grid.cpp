@@ -48,7 +48,8 @@ Grid::Grid(ModelConfig config) :
     this->init_flows();
     this->update_sa_parameters();
 
-    this->step_speeds_update();
+    this->step_speeds_z_update();
+	this->step_speeds_r_update();
     this->print();
 
 }
@@ -257,7 +258,7 @@ std::size_t pair_idx_to_uno(std::size_t i, std::size_t j, std::size_t n)
     return (i - 1) * n + (j - 1);
 }
 
-void Grid::step_speeds_update()
+void Grid::step_speeds_z_update()
 {
 
     std::vector<std::vector<double>> A((grid_.size()-2)*(grid_[0].size()-2), std::vector<double>((grid_.size()-2)*(grid_[0].size()-2), 0.0));
@@ -422,6 +423,173 @@ void Grid::step_speeds_update()
             grid_[i][j].fields.u_z_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
 }
 
+void Grid::step_speeds_r_update()
+{
+    std::vector<std::vector<double>> A((grid_.size()-2)*(grid_[0].size()-2), std::vector<double>((grid_.size()-2)*(grid_[0].size()-2), 0.0));
+    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+
+            Cell E = grid_[i + 1][j];
+            Cell W = grid_[i - 1][j];
+            Cell N = grid_[i][j + 1];
+            Cell S = grid_[i][j - 1];
+
+            Cell P = grid_[i][j];
+
+            double alpha_r_e = P.edge_geometry.S_z_e * std::cos(P.geometry.theta_P) + 2 * P.edge_geometry.S_r_e * std::sin(P.geometry.theta_P);
+            double beta_r_e = -  P.edge_geometry.S_z_e * std::sin(P.geometry.theta_P) + 2 * P.edge_geometry.S_r_e * std::cos(P.geometry.theta_P);
+
+            double alpha_r_w = P.edge_geometry.S_z_w * std::cos(P.geometry.theta_P) + 2 * P.edge_geometry.S_r_w * std::sin(P.geometry.theta_P);
+            double beta_r_w = - P.edge_geometry.S_z_w * std::sin(P.geometry.theta_P) + 2 * P.edge_geometry.S_r_w * std::cos(P.geometry.theta_P);
+
+            double alpha_r_n =  P.edge_geometry.S_z_n * std::cos(P.geometry.theta_n) + 2 * P.edge_geometry.S_r_n * std::sin(P.geometry.theta_n);
+            double beta_r_n = -  P.edge_geometry.S_z_n * std::sin(P.geometry.theta_n) + 2 * P.edge_geometry.S_r_n * std::cos(P.geometry.theta_n);
+
+            double alpha_r_s = P.edge_geometry.S_z_s * std::cos(P.geometry.theta_s) + 2 * P.edge_geometry.S_r_s * std::sin(P.geometry.theta_s);
+            double beta_r_s = - P.edge_geometry.S_z_s * std::sin(P.geometry.theta_s) + 2 * P.edge_geometry.S_r_s * std::cos(P.geometry.theta_s);
+
+            double nu_e = (E.is_boundary ? P.sa_params.nu_eff_P : (E.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+            double nu_w = (W.is_boundary ? P.sa_params.nu_eff_P : (W.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+            double nu_s = (S.is_boundary ? P.sa_params.nu_eff_P : (S.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+            double nu_n = (N.is_boundary ? P.sa_params.nu_eff_P : (N.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+
+            double D_e = (nu_e*alpha_r_e)/(E.geometry.R_P - P.geometry.R_P);
+            double D_w = (nu_w * alpha_r_w)/(P.geometry.R_P - W.geometry.R_P);
+            double D_n = (nu_n * beta_r_n)/(P.geometry.R_P * (N.geometry.theta_P - P.geometry.theta_P));
+            double D_s = (nu_s * beta_r_s)/(P.geometry.R_P * (P.geometry.theta_P - S.geometry.theta_P));
+
+            double a_E = D_e + std::max(-P.edge_geometry.F_e, 0.);
+            double a_W = D_w + std::max(P.edge_geometry.F_w, 0.);
+            double a_N = D_n + std::max(-P.edge_geometry.F_n, 0.);
+            double a_S = D_s + std::max(P.edge_geometry.F_s, 0.);
+            double a_P = a_E + a_W + a_N + a_S + 2 * P.sa_params.nu_eff_P * P.geometry.sigma_P / P.geometry.r_P;
+
+
+            double G_r_P = ((E.fields.p_P + P.fields.p_P) / 2 - P.fields.p_P) * P.edge_geometry.S_r_e -
+                           ((W.fields.p_P + P.fields.p_P) / 2 - P.fields.p_P) * P.edge_geometry.S_r_w +
+                           ((N.fields.p_P + P.fields.p_P) / 2 - P.fields.p_P) * P.edge_geometry.S_r_n -
+                           ((S.fields.p_P + P.fields.p_P) / 2 - P.fields.p_P) * P.edge_geometry.S_r_s;
+
+
+            // считаем ро, боже, какой ужас. почему так много формул..... это же вообще не поддерживаемо...
+
+			double du_zdR_P     = (E.fields.u_z_P - W.fields.u_z_P) / (E.geometry.R_P - W.geometry.R_P);
+			double du_zdtheta_P = (N.fields.u_z_P - S.fields.u_z_P) / (N.geometry.theta_P - S.geometry.theta_P);
+
+			double du_rdR_P     = (E.fields.u_r_P - W.fields.u_r_P) / (E.geometry.R_P - W.geometry.R_P);
+			double du_rdtheta_P = (N.fields.u_r_P - S.fields.u_r_P) / (N.geometry.theta_P - S.geometry.theta_P);
+
+			double du_rdz_P = std::cos(P.geometry.theta_P) * du_rdR_P - std::sin(P.geometry.theta_P) / P.geometry.R_P * du_rdtheta_P;
+			double du_zdr_P = std::sin(P.geometry.theta_P) * du_zdR_P + std::cos(P.geometry.theta_P) / P.geometry.R_P * du_zdtheta_P;
+
+			double du_zdR_E = E.is_boundary ? du_zdR_P : (grid_[i+2][j].fields.u_z_P - grid_[i][j].fields.u_z_P) / (grid_[i+2][j].geometry.R_P - grid_[i][j].geometry.R_P);
+			double du_zdR_W = W.is_boundary ? du_zdR_P : (grid_[i][j].fields.u_z_P - grid_[i-2][j].fields.u_z_P) / (grid_[i][j].geometry.R_P - grid_[i-2][j].geometry.R_P);
+			double du_zdR_N = N.is_boundary ? du_zdR_P : (grid_[i+1][j+1].fields.u_z_P - grid_[i-1][j+1].fields.u_z_P) / (grid_[i+1][j+1].geometry.R_P - grid_[i-1][j+1].geometry.R_P);
+			double du_zdR_S = S.is_boundary ? du_zdR_P : (grid_[i+1][j-1].fields.u_z_P - grid_[i-1][j-1].fields.u_z_P) / (grid_[i+1][j-1].geometry.R_P - grid_[i-1][j-1].geometry.R_P);
+
+			double du_zdtheta_E = E.is_boundary ? du_zdtheta_P : (grid_[i+1][j+1].fields.u_z_P - grid_[i+1][j-1].fields.u_z_P) / (grid_[i+1][j+1].geometry.theta_P - grid_[i+1][j-1].geometry.theta_P);
+			double du_zdtheta_W = W.is_boundary ? du_zdtheta_P : (grid_[i-1][j+1].fields.u_z_P - grid_[i-1][j-1].fields.u_z_P) / (grid_[i-1][j+1].geometry.theta_P - grid_[i-1][j-1].geometry.theta_P);
+			double du_zdtheta_N = N.is_boundary ? du_zdtheta_P : (grid_[i][j+2].fields.u_z_P - grid_[i][j].fields.u_z_P) / (grid_[i][j+2].geometry.theta_P - grid_[i][j].geometry.theta_P);
+			double du_zdtheta_S = S.is_boundary ? du_zdtheta_P : (grid_[i][j].fields.u_z_P - grid_[i][j-2].fields.u_z_P) / (grid_[i][j].geometry.theta_P - grid_[i][j-2].geometry.theta_P);
+
+			double du_rdR_E = E.is_boundary ? du_rdR_P : (grid_[i+2][j].fields.u_r_P - grid_[i][j].fields.u_r_P) / (grid_[i+2][j].geometry.R_P - grid_[i][j].geometry.R_P);
+			double du_rdR_W = W.is_boundary ? du_rdR_P : (grid_[i][j].fields.u_r_P - grid_[i-2][j].fields.u_r_P) / (grid_[i][j].geometry.R_P - grid_[i-2][j].geometry.R_P);
+			double du_rdR_N = N.is_boundary ? du_rdR_P : (grid_[i+1][j+1].fields.u_r_P - grid_[i-1][j+1].fields.u_r_P) / (grid_[i+1][j+1].geometry.R_P - grid_[i-1][j+1].geometry.R_P);
+			double du_rdR_S = S.is_boundary ? du_rdR_P : (grid_[i+1][j-1].fields.u_r_P - grid_[i-1][j-1].fields.u_r_P) / (grid_[i+1][j-1].geometry.R_P - grid_[i-1][j-1].geometry.R_P);
+
+			double du_rdtheta_E = E.is_boundary ? du_rdtheta_P : (grid_[i+1][j+1].fields.u_r_P - grid_[i+1][j-1].fields.u_r_P) / (grid_[i+1][j+1].geometry.theta_P - grid_[i+1][j-1].geometry.theta_P);
+			double du_rdtheta_W = W.is_boundary ? du_rdtheta_P : (grid_[i-1][j+1].fields.u_r_P - grid_[i-1][j-1].fields.u_r_P) / (grid_[i-1][j+1].geometry.theta_P - grid_[i-1][j-1].geometry.theta_P);
+			double du_rdtheta_N = N.is_boundary ? du_rdtheta_P : (grid_[i][j+2].fields.u_r_P - grid_[i][j].fields.u_r_P) / (grid_[i][j+2].geometry.theta_P - grid_[i][j].geometry.theta_P);
+			double du_rdtheta_S = S.is_boundary ? du_rdtheta_P : (grid_[i][j].fields.u_r_P - grid_[i][j-2].fields.u_r_P) / (grid_[i][j].geometry.theta_P - grid_[i][j-2].geometry.theta_P);
+
+			double du_rdz_E = E.is_boundary ? du_rdz_P : std::cos(E.geometry.theta_P) * du_rdR_E - std::sin(E.geometry.theta_P) / E.geometry.R_P * du_rdtheta_E;
+			double du_rdz_W = W.is_boundary ? du_rdz_P : std::cos(W.geometry.theta_P) * du_rdR_W - std::sin(W.geometry.theta_P) / W.geometry.R_P * du_rdtheta_W;
+			double du_rdz_N = N.is_boundary ? du_rdz_P : std::cos(N.geometry.theta_P) * du_rdR_N - std::sin(N.geometry.theta_P) / N.geometry.R_P * du_rdtheta_N;
+			double du_rdz_S = S.is_boundary ? du_rdz_P : std::cos(S.geometry.theta_P) * du_rdR_S - std::sin(S.geometry.theta_P) / S.geometry.R_P * du_rdtheta_S;
+
+			double du_zdr_E = E.is_boundary ? du_zdr_P : std::sin(E.geometry.theta_P) * du_zdR_E + std::cos(E.geometry.theta_P) / E.geometry.R_P * du_zdtheta_E;
+			double du_zdr_W = W.is_boundary ? du_zdr_P : std::sin(W.geometry.theta_P) * du_zdR_W + std::cos(W.geometry.theta_P) / W.geometry.R_P * du_zdtheta_W;
+			double du_zdr_N = N.is_boundary ? du_zdr_P : std::sin(N.geometry.theta_P) * du_zdR_N + std::cos(N.geometry.theta_P) / N.geometry.R_P * du_zdtheta_N;
+			double du_zdr_S = S.is_boundary ? du_zdr_P : std::sin(S.geometry.theta_P) * du_zdR_S + std::cos(S.geometry.theta_P) / S.geometry.R_P * du_zdtheta_S;
+
+
+			double du_rdtheta_e = E.is_boundary ? du_rdtheta_P : 0.5 * (du_rdtheta_P + du_rdtheta_E);
+			double du_rdtheta_w = W.is_boundary ? du_rdtheta_P : 0.5 * (du_rdtheta_P + du_rdtheta_W);
+
+			double du_rdR_n = N.is_boundary ? du_rdR_P : 0.5 * (du_rdR_P + du_rdR_N);
+			double du_rdR_s = S.is_boundary ? du_rdR_P : 0.5 * (du_rdR_P + du_rdR_S);
+
+			double du_zdr_e = E.is_boundary ? du_zdr_P : 0.5 * (du_zdr_P + du_zdr_E);
+			double du_zdr_w = W.is_boundary ? du_zdr_P : 0.5 * (du_zdr_P + du_zdr_W);
+			double du_zdr_n = N.is_boundary ? du_zdr_P : 0.5 * (du_zdr_P + du_zdr_N);
+			double du_zdr_s = S.is_boundary ? du_zdr_P : 0.5 * (du_zdr_P + du_zdr_S);
+
+
+            double rho_r_e = nu_e * (beta_r_e * 1/P.geometry.R_e * du_rdtheta_e + P.edge_geometry.S_z_e * du_zdr_e);
+            double rho_r_w = nu_w * (beta_r_w * 1/P.geometry.R_w * du_rdtheta_w + P.edge_geometry.S_z_w * du_zdr_w);
+
+            double rho_r_n = nu_n * (alpha_r_n * du_rdR_n + P.edge_geometry.S_z_n * du_zdr_n);
+            double rho_r_s = nu_s * (alpha_r_s * du_rdR_s + P.edge_geometry.S_z_s * du_zdr_s);
+
+            double b_P = -G_r_P + rho_r_e - rho_r_w + rho_r_n - rho_r_s;
+
+
+            std::size_t row = pair_idx_to_uno(i, j, grid_[0].size() - 2);
+
+            b[row]      = b_P;
+            A[row][row] = a_P;
+
+        	if (!E.is_boundary)
+        	{
+        		A[row][pair_idx_to_uno(i + 1, j, grid_[0].size() - 2)] = -a_E;
+        	}
+        	else if (P.geometry.theta_P > M_PI / 2.0)
+        	{
+        	}
+        	else
+        	{
+        		b[row] += a_E * P.fields.u_r_P;
+        	}
+
+        	if (!W.is_boundary)
+        	{
+        		A[row][pair_idx_to_uno(i - 1, j, grid_[0].size() - 2)] = -a_W;
+        	}
+
+        	if (!N.is_boundary)
+        	{
+        		A[row][pair_idx_to_uno(i, j + 1, grid_[0].size() - 2)] = -a_N;
+        	}
+        	else
+        	{
+        		b[row] -= a_N * P.fields.u_r_P;
+        	}
+
+        	if (!S.is_boundary)
+        	{
+        		A[row][pair_idx_to_uno(i, j - 1, grid_[0].size() - 2)] = -a_S;
+        	}
+        	else
+        	{
+        		b[row] -= a_S * P.fields.u_r_P;
+        	}
+
+            grid_[i][j].update_SA_parameters(grid_[i + 1][j], grid_[i - 1][j], grid_[i][j + 1], grid_[i][j - 1], config_);
+        }
+    }
+
+
+    std::vector<double> x = GS(A, b, 1e-3);
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+            grid_[i][j].fields.u_r_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
+}
+
 void Grid::print()
 {
     std::cout << std::scientific;
@@ -432,6 +600,7 @@ void Grid::print()
         {
             std::cout << i << " " << j << std::endl;
             std::cout << " uzp "  << grid_[i][j].fields.u_z_P << std::endl;
+        	std::cout << " urp " << grid_[i][j].fields.u_r_P << std::endl;
 
             std::cout << "thetas " << grid_[i][j].geometry.theta_n << " " << grid_[i][j].geometry.theta_s<< std::endl;
             std::cout << "radii " << grid_[i][j].geometry.R_e << " " << grid_[i][j].geometry.R_w<< std::endl;

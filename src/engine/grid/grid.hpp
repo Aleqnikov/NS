@@ -41,7 +41,8 @@ public:
     void update_sa_parameters();
 
     void init_flows();
-    void step_speeds_update();
+    void step_speeds_z_update();
+	void step_speeds_r_update();
     void print();
 
     std::pair<int, int> get_grid_dimensions();
