@@ -22,6 +22,10 @@ struct ModelConfig
     double sigma  = 0.6666666;
 
 
+    // Параметры релаксации для подсчета давления
+    double alpha_p = 0.3;
+
+
     ModelConfig(double speed, double radius, double density) :
     speed{speed}, radius{radius}, density{density} {};
 };

@@ -46,19 +46,29 @@ Grid::Grid(ModelConfig config) :
 
     this->init_boundary_cond();
     this->init_flows();
-    this->update_sa_parameters();
-
-    for (std::size_t i = 1; i < 3; ++i)
+    for (std::size_t l = 0; l < 3; l++)
     {
-        this->step_speeds_z_update();
+
         this->update_boundary_cells();
 
-        this->step_speeds_r_update();
+        this->update_sa_parameters();
+
+        for (std::size_t i = 1; i < 3; ++i)
+        {
+            this->step_speeds_z_update();
+            this->update_boundary_cells();
+
+            this->step_speeds_r_update();
+            this->update_boundary_cells();
+        }
+
+        this->step_flows_update();
+
+        this->init_boundary_cond();
+
+        this->step_pressure_update();
         this->update_boundary_cells();
     }
-
-    this->step_flows_update();
-
 
 
     this->print();
@@ -659,6 +669,142 @@ void Grid::step_flows_update()
     }
 }
 
+
+void Grid::step_pressure_update()
+{
+    std::vector<std::vector<double>> A((grid_.size()-2)*(grid_[0].size()-2), std::vector<double>((grid_.size()-2)*(grid_[0].size()-2), 0.0));
+    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            Cell E = grid_[i + 1][j];
+            Cell W = grid_[i - 1][j];
+            Cell N = grid_[i][j + 1];
+            Cell S = grid_[i][j - 1];
+
+            Cell P = grid_[i][j];
+
+            double d_z_P = 1/(P.speed_results.a_z_P);
+            double d_z_E = 1 / (E.speed_results.a_z_P);
+            double d_z_e = 0.5 * (d_z_E + d_z_P);
+            double d_z_W = 1 / (W.speed_results.a_z_P);
+            double d_z_w = 0.5 * (d_z_W + d_z_P);
+            double d_z_N = 1 / (N.speed_results.a_z_P);
+            double d_z_n = 0.5 * (d_z_N + d_z_P);
+            double d_z_S = 1 / (S.speed_results.a_z_P);
+            double d_z_s = 0.5 * (d_z_S + d_z_P);
+
+            double d_r_P = 1/(P.speed_results.a_r_P);
+            double d_r_E = 1 / (E.speed_results.a_r_P);
+            double d_r_e = 0.5 * (d_r_E + d_r_P);
+            double d_r_W = 1 / (W.speed_results.a_r_P);
+            double d_r_w = 0.5 * (d_r_W + d_r_P);
+            double d_r_N = 1 / (N.speed_results.a_r_P);
+            double d_r_n = 0.5 * (d_r_N + d_r_P);
+            double d_r_S = 1 / (S.speed_results.a_r_P);
+            double d_r_s = 0.5 * (d_r_S + d_r_P);
+
+
+
+            double Theta_e = d_z_e * P.edge_geometry.S_z_e * P.edge_geometry.S_z_e + d_r_e * P.edge_geometry.S_r_e   * P.edge_geometry.S_r_e;
+            double Theta_w = d_z_w * P.edge_geometry.S_z_w * P.edge_geometry.S_z_w + d_r_w * P.edge_geometry.S_r_w   * P.edge_geometry.S_r_w;
+            double Theta_n = d_z_n * P.edge_geometry.S_z_n * P.edge_geometry.S_z_n + d_r_n * P.edge_geometry.S_r_n   * P.edge_geometry.S_r_n;
+            double Theta_s = d_z_s * P.edge_geometry.S_z_s * P.edge_geometry.S_z_s + d_r_s * P.edge_geometry.S_r_s  * P.edge_geometry.S_r_s;
+
+            double a_E = Theta_e;
+            double a_W = Theta_w;
+            double a_N = Theta_n;
+            double a_S = Theta_s;
+
+            if (E.is_boundary) {
+                if (P.geometry.theta_P > M_PI/2.0) a_E = 0.0;
+            }
+            if (W.is_boundary) a_W = 0.0;
+            if (N.is_boundary) a_N = 0.0;
+            if (S.is_boundary) a_S = 0.0;
+
+
+            double a_P = a_E + a_W + a_N + a_S;
+            double b_P = -(P.edge_geometry.F_e - P.edge_geometry.F_w + P.edge_geometry.F_n - P.edge_geometry.F_s);
+
+
+            std::size_t row = pair_idx_to_uno(i, j, grid_[0].size() - 2);
+
+            b[row]      = b_P;
+            A[row][row] = a_P;
+
+            if (!E.is_boundary) A[row][pair_idx_to_uno(i+1, j, grid_[0].size() - 2)] = -a_E;
+            if (!W.is_boundary) A[row][pair_idx_to_uno(i-1, j, grid_[0].size() - 2)] = -a_W;
+            if (!N.is_boundary) A[row][pair_idx_to_uno(i, j+1, grid_[0].size() - 2)] = -a_N;
+            if (!S.is_boundary) A[row][pair_idx_to_uno(i, j-1, grid_[0].size() - 2)] = -a_S;
+
+        }
+    }
+
+    std::vector<double> x = GS(A, b, 1e-3);
+
+    const std::size_t Nth = grid_[0].size() - 2;
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            Cell& P = grid_[i][j];
+            Cell& E = grid_[i + 1][j];
+            Cell& W = grid_[i - 1][j];
+            Cell& N = grid_[i][j + 1];
+            Cell& S = grid_[i][j - 1];
+
+            std::size_t k = pair_idx_to_uno(i, j, Nth);
+
+            double pp_P = x[k];
+
+            double pp_E = E.is_boundary ? (P.geometry.theta_P > M_PI / 2.0 ? pp_P : 0.0)  : x[pair_idx_to_uno(i + 1, j, Nth)];
+            double pp_W = W.is_boundary ? pp_P : x[pair_idx_to_uno(i - 1, j, Nth)];
+            double pp_N = N.is_boundary ? pp_P : x[pair_idx_to_uno(i, j + 1, Nth)];
+            double pp_S = S.is_boundary ? pp_P : x[pair_idx_to_uno(i, j - 1, Nth)];
+
+            double d_z_P = 1.0 / P.speed_results.a_z_P;
+            double d_r_P = 1.0 / P.speed_results.a_r_P;
+
+            double Gz_p = 0.5 * (pp_E - pp_P) * P.edge_geometry.S_z_e - 0.5 * (pp_W - pp_P) * P.edge_geometry.S_z_w + 0.5 * (pp_N - pp_P) * P.edge_geometry.S_z_n - 0.5 * (pp_S - pp_P) * P.edge_geometry.S_z_s;
+
+            double Gr_p = 0.5 * (pp_E - pp_P) * P.edge_geometry.S_r_e - 0.5 * (pp_W - pp_P) * P.edge_geometry.S_r_w + 0.5 * (pp_N - pp_P) * P.edge_geometry.S_r_n - 0.5 * (pp_S - pp_P) * P.edge_geometry.S_r_s;
+
+            P.fields.p_P += config_.alpha_p * pp_P;
+
+            P.fields.u_z_P += -d_z_P * Gz_p;
+            P.fields.u_r_P += -d_r_P * Gr_p;
+
+            double d_z_E = E.is_boundary ? 0.0 : 1.0 / E.speed_results.a_z_P;
+            double d_z_W = W.is_boundary ? 0.0 : 1.0 / W.speed_results.a_z_P;
+            double d_z_N = N.is_boundary ? 0.0 : 1.0 / N.speed_results.a_z_P;
+            double d_z_S = S.is_boundary ? 0.0 : 1.0 / S.speed_results.a_z_P;
+
+            double d_r_E = E.is_boundary ? 0.0 : 1.0 / E.speed_results.a_r_P;
+            double d_r_W = W.is_boundary ? 0.0 : 1.0 / W.speed_results.a_r_P;
+            double d_r_N = N.is_boundary ? 0.0 : 1.0 / N.speed_results.a_r_P;
+            double d_r_S = S.is_boundary ? 0.0 : 1.0 / S.speed_results.a_r_P;
+
+            double Theta_e = 0.5 * (d_z_P + d_z_E) * P.edge_geometry.S_z_e * P.edge_geometry.S_z_e + 0.5 * (d_r_P + d_r_E) * P.edge_geometry.S_r_e * P.edge_geometry.S_r_e;
+            double Theta_w = 0.5 * (d_z_P + d_z_W) * P.edge_geometry.S_z_w * P.edge_geometry.S_z_w + 0.5 * (d_r_P + d_r_W) * P.edge_geometry.S_r_w * P.edge_geometry.S_r_w;
+            double Theta_n = 0.5 * (d_z_P + d_z_N) * P.edge_geometry.S_z_n * P.edge_geometry.S_z_n + 0.5 * (d_r_P + d_r_N) * P.edge_geometry.S_r_n * P.edge_geometry.S_r_n;
+            double Theta_s = 0.5 * (d_z_P + d_z_S) * P.edge_geometry.S_z_s * P.edge_geometry.S_z_s + 0.5 * (d_r_P + d_r_S) * P.edge_geometry.S_r_s * P.edge_geometry.S_r_s;
+
+
+            P.edge_geometry.F_e += -Theta_e * (pp_E - pp_P);
+            P.edge_geometry.F_w += -Theta_w * (pp_P - pp_W);
+            P.edge_geometry.F_n += -Theta_n * (pp_N - pp_P);
+            P.edge_geometry.F_s += -Theta_s * (pp_P - pp_S);
+        }
+    }
+
+
+}
+
 void Grid::print()
 {
     std::cout << std::scientific;
@@ -671,6 +817,7 @@ void Grid::print()
             std::cout << " uzp "  << grid_[i][j].fields.u_z_P << std::endl;
         	std::cout << " urp " << grid_[i][j].fields.u_r_P << std::endl;
             std::cout << " sum flows " << grid_[i][j].edge_geometry.F_e - grid_[i][j].edge_geometry.F_w + grid_[i][j].edge_geometry.F_n - grid_[i][j].edge_geometry.F_s << std::endl;
+            std::cout << " p " << grid_[i][j].fields.p_P << std::endl;
             std::cout << "thetas " << grid_[i][j].geometry.theta_n << " " << grid_[i][j].geometry.theta_s<< std::endl;
             std::cout << "radii " << grid_[i][j].geometry.R_e << " " << grid_[i][j].geometry.R_w<< std::endl;
         }

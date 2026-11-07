@@ -45,6 +45,7 @@ public:
     void step_speeds_z_update();
 	void step_speeds_r_update();
     void step_flows_update();
+    void step_pressure_update();
     void print();
 
     std::pair<int, int> get_grid_dimensions();
