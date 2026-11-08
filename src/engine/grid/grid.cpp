@@ -627,13 +627,13 @@ void Grid::step_flows_update()
             Cell P = grid_[i][j];
 
             double d_z_P = 1/(P.speed_results.a_z_P);
-            double d_z_E = 1 / (E.speed_results.a_z_P);
+            double d_z_E =  E.is_boundary ? d_z_P : 1 / (E.speed_results.a_z_P);
             double d_z_e = 0.5 * (d_z_E + d_z_P);
-            double d_z_W = 1 / (W.speed_results.a_z_P);
+            double d_z_W =  W.is_boundary ? d_z_P : 1 / (W.speed_results.a_z_P);
             double d_z_w = 0.5 * (d_z_W + d_z_P);
-            double d_z_N = 1 / (N.speed_results.a_z_P);
+            double d_z_N =  N.is_boundary ? d_z_P : 1 / (N.speed_results.a_z_P);
             double d_z_n = 0.5 * (d_z_N + d_z_P);
-            double d_z_S = 1 / (S.speed_results.a_z_P);
+            double d_z_S =  S.is_boundary ? d_z_P : 1 / (S.speed_results.a_z_P);
             double d_z_s = 0.5 * (d_z_S + d_z_P);
 
 
@@ -644,13 +644,13 @@ void Grid::step_flows_update()
             double u_z_s = 0.5 * (P.fields.u_z_P + S.fields.u_z_P) + 0.5 * (d_z_P * P.speed_results.G_z_P + d_z_S * S.speed_results.G_z_P) - d_z_s * P.edge_geometry.S_z_s * (S.fields.p_P - P.fields.p_P);
 
             double d_r_P = 1/(P.speed_results.a_r_P);
-            double d_r_E = 1 / (E.speed_results.a_r_P);
+            double d_r_E = E.is_boundary ? d_r_P : 1 / (E.speed_results.a_r_P);
             double d_r_e = 0.5 * (d_r_E + d_r_P);
-            double d_r_W = 1 / (W.speed_results.a_r_P);
+            double d_r_W = W.is_boundary ? d_r_P : 1 / (W.speed_results.a_r_P);
             double d_r_w = 0.5 * (d_r_W + d_r_P);
-            double d_r_N = 1 / (N.speed_results.a_r_P);
+            double d_r_N = N.is_boundary ? d_r_P : 1 / (N.speed_results.a_r_P);
             double d_r_n = 0.5 * (d_r_N + d_r_P);
-            double d_r_S = 1 / (S.speed_results.a_r_P);
+            double d_r_S =  S.is_boundary ? d_r_P : 1 / (S.speed_results.a_r_P);
             double d_r_s = 0.5 * (d_r_S + d_r_P);
 
 
@@ -688,23 +688,23 @@ void Grid::step_pressure_update()
             Cell P = grid_[i][j];
 
             double d_z_P = 1/(P.speed_results.a_z_P);
-            double d_z_E = 1 / (E.speed_results.a_z_P);
+            double d_z_E =  E.is_boundary ? d_z_P : 1 / (E.speed_results.a_z_P);
             double d_z_e = 0.5 * (d_z_E + d_z_P);
-            double d_z_W = 1 / (W.speed_results.a_z_P);
+            double d_z_W =  W.is_boundary ? d_z_P : 1 / (W.speed_results.a_z_P);
             double d_z_w = 0.5 * (d_z_W + d_z_P);
-            double d_z_N = 1 / (N.speed_results.a_z_P);
+            double d_z_N =  N.is_boundary ? d_z_P : 1 / (N.speed_results.a_z_P);
             double d_z_n = 0.5 * (d_z_N + d_z_P);
-            double d_z_S = 1 / (S.speed_results.a_z_P);
+            double d_z_S =  S.is_boundary ? d_z_P : 1 / (S.speed_results.a_z_P);
             double d_z_s = 0.5 * (d_z_S + d_z_P);
 
             double d_r_P = 1/(P.speed_results.a_r_P);
-            double d_r_E = 1 / (E.speed_results.a_r_P);
+            double d_r_E = E.is_boundary ? d_r_P : 1 / (E.speed_results.a_r_P);
             double d_r_e = 0.5 * (d_r_E + d_r_P);
-            double d_r_W = 1 / (W.speed_results.a_r_P);
+            double d_r_W = W.is_boundary ? d_r_P : 1 / (W.speed_results.a_r_P);
             double d_r_w = 0.5 * (d_r_W + d_r_P);
-            double d_r_N = 1 / (N.speed_results.a_r_P);
+            double d_r_N = N.is_boundary ? d_r_P : 1 / (N.speed_results.a_r_P);
             double d_r_n = 0.5 * (d_r_N + d_r_P);
-            double d_r_S = 1 / (S.speed_results.a_r_P);
+            double d_r_S =  S.is_boundary ? d_r_P : 1 / (S.speed_results.a_r_P);
             double d_r_s = 0.5 * (d_r_S + d_r_P);
 
 
@@ -779,15 +779,15 @@ void Grid::step_pressure_update()
             P.fields.u_z_P += -d_z_P * Gz_p;
             P.fields.u_r_P += -d_r_P * Gr_p;
 
-            double d_z_E = E.is_boundary ? 0.0 : 1.0 / E.speed_results.a_z_P;
-            double d_z_W = W.is_boundary ? 0.0 : 1.0 / W.speed_results.a_z_P;
-            double d_z_N = N.is_boundary ? 0.0 : 1.0 / N.speed_results.a_z_P;
-            double d_z_S = S.is_boundary ? 0.0 : 1.0 / S.speed_results.a_z_P;
+            double d_z_E = E.is_boundary ? d_z_P : 1.0 / E.speed_results.a_z_P;
+            double d_z_W = W.is_boundary ? d_z_P : 1.0 / W.speed_results.a_z_P;
+            double d_z_N = N.is_boundary ? d_z_P : 1.0 / N.speed_results.a_z_P;
+            double d_z_S = S.is_boundary ? d_z_P : 1.0 / S.speed_results.a_z_P;
 
-            double d_r_E = E.is_boundary ? 0.0 : 1.0 / E.speed_results.a_r_P;
-            double d_r_W = W.is_boundary ? 0.0 : 1.0 / W.speed_results.a_r_P;
-            double d_r_N = N.is_boundary ? 0.0 : 1.0 / N.speed_results.a_r_P;
-            double d_r_S = S.is_boundary ? 0.0 : 1.0 / S.speed_results.a_r_P;
+            double d_r_E = E.is_boundary ? d_r_P : 1.0 / E.speed_results.a_r_P;
+            double d_r_W = W.is_boundary ? d_r_P : 1.0 / W.speed_results.a_r_P;
+            double d_r_N = N.is_boundary ? d_r_P : 1.0 / N.speed_results.a_r_P;
+            double d_r_S = S.is_boundary ? d_r_P : 1.0 / S.speed_results.a_r_P;
 
             double Theta_e = 0.5 * (d_z_P + d_z_E) * P.edge_geometry.S_z_e * P.edge_geometry.S_z_e + 0.5 * (d_r_P + d_r_E) * P.edge_geometry.S_r_e * P.edge_geometry.S_r_e;
             double Theta_w = 0.5 * (d_z_P + d_z_W) * P.edge_geometry.S_z_w * P.edge_geometry.S_z_w + 0.5 * (d_r_P + d_r_W) * P.edge_geometry.S_r_w * P.edge_geometry.S_r_w;
