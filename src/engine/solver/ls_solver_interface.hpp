@@ -5,7 +5,7 @@ using matrix = std::vector<std::vector<double>>;
 class LsSolverI{
 public:
     LsSolverI() = default;
-    ~LsSolverI() = default;
+    virtual ~LsSolverI() = default;
 
     /** Решает СЛАУ вида Ax=b
      * As - n матриц m*m (вроде как 5 на 5, но не принципиально) A[n][m][m]
