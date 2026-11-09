@@ -3,19 +3,14 @@
 #include <stdexcept>
 
 matrix GsSolver::solve(const std::vector<matrix>& As, const matrix& bs) {
-    matrix Xs(As.size());
+    isInputCorrect(As, bs);
 
-    if (
-        As.size() == 0 || bs.size() == 0 ||
-        As.size() != bs.size() ||
-        As[0].size() != bs[0].size()
-    ) {
-        throw std::invalid_argument("As or bs is invalid");
-    }
+    matrix Xs(As.size());
+    notСonvergedMatrixNumbers = std::vector<int>(As.size(), 0);
 
     for(int i = 0; i < As.size(); i++) {
         if (!solveLS(As[i], bs[i], Xs[i])) 
-            notСonvergedMatrixNumbers.push_back(i);
+            notСonvergedMatrixNumbers[i] = 1;
     }
     return Xs;
 }
@@ -43,7 +38,7 @@ bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vecto
             dx = std::max(dx, std::abs(old_xi - x[i]));
         }
         if (dx < maxDx)
-            return false;
+            break;
         k++;
     }
     
@@ -67,4 +62,14 @@ bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vecto
     if ((r_norm / scale) > tolerance) return false;
 
     return true;
+}
+
+void GsSolver::isInputCorrect(const std::vector<matrix>& As, const matrix& bs) {
+    if (
+        As.size() == 0 || bs.size() == 0 ||
+        As.size() != bs.size() ||
+        As[0].size() != bs[0].size()
+    ) {
+        throw std::invalid_argument("As or bs is invalid");
+    }
 }

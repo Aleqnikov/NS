@@ -26,9 +26,12 @@ public:
 
     const std::vector<int>& getNotCoveredMatrixNumbers() const { return notСonvergedMatrixNumbers; };
 
-private:
+protected:
+    void isInputCorrect(const std::vector<matrix>& As, const matrix& bs);
+
     const double maxDx;
 
-    // индекс матриц, которые не сошлись
+    // матрица размера m (кол-во СЛАУ на решение), если матрица не 
+    //сошлась, то значение по её индексу = 1. В ином случае 0
     std::vector<int> notСonvergedMatrixNumbers;
 };
