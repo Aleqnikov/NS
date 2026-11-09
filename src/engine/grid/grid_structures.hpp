@@ -28,6 +28,8 @@ struct Fields
     double u_z_P{}, u_r_P{};
     double p_P{};
     double nut_P{};
+    double u_z_prev = 0.0;
+    double u_r_prev = 0.0;
 };
 
 struct CellGeometry
