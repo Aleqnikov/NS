@@ -5,49 +5,42 @@
 #include <cmath>
 
 
-std::vector<double> GS (const std::vector<std::vector<double>>& A, std::vector<double> &b, double tol)
+std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, double tol)
 {
-    std::size_t n = A.size();
+    const std::size_t n = A.size();
+    std::vector<double> x(n, 0.0);
+    std::vector<double> x_new(n, 0.0);
 
-    std::vector<double> x(n);
-
-    for (std::size_t e = 0; e < 100; ++e)
+    for (std::size_t e = 0; e < 7000; ++e)
     {
-        std::vector<double> x_new = x;
-
+        // прямой ход Гаусса-Зейделя
         for (std::size_t i = 0; i < n; ++i)
         {
-            double s_1 = 0;
-
-            for (std::size_t j = 0; j < i; j++)
-                s_1 += A[i][j] * x_new[j];
-
-            double s_2 = 0;
-            for (std::size_t j = i + 1; j < n; j++)
-                s_2 += A[i][j] * x[j];
-
-            x_new[i] = (b[i] - s_1 - s_2) / A[i][i];
+            double s_1 = 0.0, s_2 = 0.0, diag = 0.0;
+            const auto& row = A[i];
+            for (std::size_t k = 0; k < row.nnz; ++k)
+            {
+                const std::size_t j   = row.entries[k].first;
+                const double      val = row.entries[k].second;
+                if (j < i)       s_1  += val * x_new[j];
+                else if (j > i)  s_2  += val * x[j];
+                else             diag  = val;
+            }
+            x_new[i] = (b[i] - s_1 - s_2) / diag;
         }
-        x = x_new;
+        x.swap(x_new);
 
-
+        // невязка — тоже по nnz, а не по n
         double res = 0.0;
         for (std::size_t i = 0; i < n; ++i)
         {
             double r = b[i];
-            for (std::size_t j = 0; j < n; ++j)
-                r -= A[i][j] * x[j];
-
+            const auto& row = A[i];
+            for (std::size_t k = 0; k < row.nnz; ++k)
+                r -= row.entries[k].second * x[row.entries[k].first];
             res = std::max(res, std::fabs(r));
         }
-
-        if (res < tol)
-        {
-            break;
-        }
-
+        if (res < 1e-6) break;
     }
-
     return x;
 }
-

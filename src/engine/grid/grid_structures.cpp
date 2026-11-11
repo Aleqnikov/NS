@@ -49,4 +49,6 @@ Fields::Fields(double speed, double nu)
     u_r_P = 0;
     p_P = 0;
     nut_P = 3 * nu;
+    u_z_prev = speed;
+    u_r_prev = 0;
 }
