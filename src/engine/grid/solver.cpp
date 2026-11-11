@@ -11,7 +11,7 @@ std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, doub
     std::vector<double> x(n, 0.0);
     std::vector<double> x_new(n, 0.0);
 
-    for (std::size_t e = 0; e < 10000; ++e)
+    for (std::size_t e = 0; e < 7000; ++e)
     {
         // прямой ход Гаусса-Зейделя
         for (std::size_t i = 0; i < n; ++i)
@@ -40,7 +40,7 @@ std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, doub
                 r -= row.entries[k].second * x[row.entries[k].first];
             res = std::max(res, std::fabs(r));
         }
-        if (res < 1e-8) break;
+        if (res < 1e-6) break;
     }
     return x;
 }

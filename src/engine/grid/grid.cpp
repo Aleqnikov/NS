@@ -13,10 +13,10 @@ namespace GU = grid_utils;
 Grid::Grid(ModelConfig config) :
     config_(config)
 {
-    double height = config.radius * 20;
+    double height = config.radius * 40;
 
-    int N_R_max = 150, N_R_min = 100;
-    int N_theta_max = 100, N_theta_min = 50;
+    int N_R_max = 250, N_R_min = 70;
+    int N_theta_max = 200, N_theta_min =25;
 
     int N_R_current  = N_R_min + config.density * (N_R_max - N_R_min);
     int N_theta_current = N_theta_min + config.density * (N_theta_max - N_theta_min);
@@ -51,8 +51,9 @@ Grid::Grid(ModelConfig config) :
 
     this->update_sa_parameters();
 
-    for (std::size_t p = 1; p < 20; ++p)
+    for (std::size_t p = 1; p < 2000; ++p)
     {
+    	std::cerr << p <<  "step " << std::endl;
         for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         {
             for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -62,7 +63,7 @@ Grid::Grid(ModelConfig config) :
             }
         }
 
-        for (std::size_t i = 1; i < 3; ++i)
+        for (std::size_t i = 1; i < 2; ++i)
         {
             this->step_speeds_z_update();
             this->update_boundary_cells();
@@ -78,6 +79,9 @@ Grid::Grid(ModelConfig config) :
         this->step_pressure_update();
 
         this->update_boundary_cells();
+
+    	this->update_sa_parameters();
+    	this->update_boundary_cells();
     }
 
 
@@ -303,12 +307,12 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
         {
 
-            Cell E = grid_[i + 1][j];
-            Cell W = grid_[i - 1][j];
-            Cell N = grid_[i][j + 1];
-            Cell S = grid_[i][j - 1];
+            const Cell& E = grid_[i + 1][j];
+            const Cell& W = grid_[i - 1][j];
+            const Cell& N = grid_[i][j + 1];
+            const Cell& S = grid_[i][j - 1];
 
-            Cell P = grid_[i][j];
+            const Cell& P = grid_[i][j];
 
             double alpha_z_e = 2 * P.edge_geometry.S_z_e * std::cos(P.geometry.theta_P) + P.edge_geometry.S_r_e * std::sin(P.geometry.theta_P);
             double beta_z_e = - 2 * P.edge_geometry.S_z_e * std::sin(P.geometry.theta_P) + P.edge_geometry.S_r_e * std::cos(P.geometry.theta_P);
@@ -457,10 +461,10 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
         {
 
-            Cell E = grid_[i + 1][j];
-            Cell W = grid_[i - 1][j];
-            Cell N = grid_[i][j + 1];
-            Cell S = grid_[i][j - 1];
+            const Cell& E = grid_[i + 1][j];
+            const Cell& W = grid_[i - 1][j];
+            const Cell& N = grid_[i][j + 1];
+            const Cell& S = grid_[i][j - 1];
 
             Cell P = grid_[i][j];
 
@@ -614,10 +618,10 @@ void Grid::step_flows_update()
     {
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
         {
-            Cell E = grid_[i + 1][j];
-            Cell W = grid_[i - 1][j];
-            Cell N = grid_[i][j + 1];
-            Cell S = grid_[i][j - 1];
+            const Cell& E = grid_[i + 1][j];
+            const Cell& W = grid_[i - 1][j];
+            const Cell& N = grid_[i][j + 1];
+            const Cell& S = grid_[i][j - 1];
 
             Cell P = grid_[i][j];
 
@@ -712,10 +716,10 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
     {
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
         {
-            Cell E = grid_[i + 1][j];
-            Cell W = grid_[i - 1][j];
-            Cell N = grid_[i][j + 1];
-            Cell S = grid_[i][j - 1];
+            const Cell& E = grid_[i + 1][j];
+            const Cell& W = grid_[i - 1][j];
+            const Cell& N = grid_[i][j + 1];
+            const Cell& S = grid_[i][j - 1];
 
             Cell P = grid_[i][j];
 
