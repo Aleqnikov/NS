@@ -2,17 +2,10 @@
 #include <algorithm>
 #include <stdexcept>
 
-matrix GsSolver::solve(const std::vector<matrix>& As, const matrix& bs) {
-    isInputCorrect(As, bs);
-
-    matrix Xs(As.size());
-    notСonvergedMatrixNumbers = std::vector<int>(As.size(), 0);
-
-    for(int i = 0; i < As.size(); i++) {
-        if (!solveLS(As[i], bs[i], Xs[i])) 
-            notСonvergedMatrixNumbers[i] = 1;
-    }
-    return Xs;
+matrix GsSolver::solve(const std::vector<matrix>& A, const matrix& b) {
+    matrix Xs(A.size());
+    errTol = constants::calcErrorTolerance(A.size());
+    
 }
 
 bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vector<double>& x) {
@@ -22,9 +15,11 @@ bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vecto
     }
 
     int k = 0;
+    int dx_ind = -1;
+    int needToCheckResidualAcc = 0;
     double sum, dx, old_xi;
     while(k < maxIterCount) {
-        dx = 0;
+        dx = -1;
         for(int i = 0; i < A.size(); i++) {
             old_xi = x[i];
             sum = b[i];
@@ -35,14 +30,28 @@ bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vecto
                 sum -= A[i][j] * x[j];
             }
             x[i] = sum / A[i][i];
-            dx = std::max(dx, std::abs(old_xi - x[i]));
+            if(dx < std::abs(old_xi - x[i])) {
+                dx = std::abs(old_xi - x[i]);
+                dx_ind = i;
+            }
+            
         }
-        if (dx < maxDx)
-            break;
+        if (dx < absDxTol + x[dx_ind] * relDxTol)
+            needToCheckResidualAcc++;
         k++;
+
+        if(needToCheckResidualAcc >= errCheckInter) {
+            if (calcBackwardError(A, b, x) < errTol) 
+                return true;
+            needToCheckResidualAcc = 0;
+        }
     }
-    
-    //так называемый backward error - почитать как работает, я пока так и не понял
+    return false;
+}
+
+
+//так называемый backward error - почитать как работает, я пока так и не понял
+double GsSolver::calcBackwardError(const matrix& A, const std::vector<double>& b, std::vector<double>& x) {
     std::vector<double> residual = calcResidual(A, b, x);
     double A_norm = 0;
     for (const auto& row : A) {
@@ -57,19 +66,7 @@ bool GsSolver::solveLS(const matrix& A, const std::vector<double>& b, std::vecto
     double scale = A_norm * x_norm + b_norm;
 
     //только в случае если A = 0 и b = 0 (вроде как не возможно)
-    if (scale == 0.0) return true; 
-
-    if ((r_norm / scale) > tolerance) return false;
-
-    return true;
+    if (scale == 0.0) return 0.0;
+    return r_norm / scale;
 }
 
-void GsSolver::isInputCorrect(const std::vector<matrix>& As, const matrix& bs) {
-    if (
-        As.size() == 0 || bs.size() == 0 ||
-        As.size() != bs.size() ||
-        As[0].size() != bs[0].size()
-    ) {
-        throw std::invalid_argument("As or bs is invalid");
-    }
-}
