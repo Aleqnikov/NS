@@ -5,6 +5,8 @@
 #include <cmath>
 
 
+
+
 std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, double tol)
 {
     const std::size_t n = A.size();
@@ -28,6 +30,17 @@ std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, doub
             }
             x_new[i] = (b[i] - s_1 - s_2) / diag;
         }
+
+        double diff_norm = 0.0;
+        double x_norm    = 0.0;   //
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            diff_norm = std::max(diff_norm, std::fabs(x_new[i] - x[i]));
+            x_norm    = std::max(x_norm,    std::fabs(x_new[i]));
+        }
+        const double rel_err = (x_norm > 0.0) ? (diff_norm / x_norm)
+                                              : diff_norm;
+
         x.swap(x_new);
 
         // невязка — тоже по nnz, а не по n
@@ -40,7 +53,10 @@ std::vector<double> GS(const SparseMatrix& A, const std::vector<double>& b, doub
                 r -= row.entries[k].second * x[row.entries[k].first];
             res = std::max(res, std::fabs(r));
         }
-        if (res < 1e-6) break;
+
+
+        // остановка по относительной ошибке (и, для надёжности, по невязке)
+        if (rel_err < tol ) break;
     }
     return x;
 }

@@ -121,26 +121,46 @@ def sample_cells(d, th_edges, R_edges, x, y):
     return d["uz"][i, j], d["ur"][i, j], ok
 
 
+# --- draw() ---
 def draw(d, geo, name, args, U, Rs):
     th_edges, R_edges, th_c, R_c, X, Y = geo
     C, label, cmap, (vmin, vmax) = field_values(d, name, U)
 
+    # --- границы всей расчётной области ---
+    # углы сетки — это крайние ячейки; берём по всем узлам (X, Y),
+    # плюс небольшой запас, чтобы граница не упиралась в рамку
+    X_min, X_max = float(np.nanmin(X)), float(np.nanmax(X))
+    Y_max = float(np.nanmax(np.abs(Y)))
+
+    if args.xlim is None:
+        span = X_max - X_min
+        pad = 0.01 * span if span > 0 else 0.0
+        x0, x1 = X_min - pad, X_max + pad
+    else:
+        x0, x1 = args.xlim[0] * Rs, args.xlim[1] * Rs
+
+    if args.ylim is None:
+        yl = Y_max * 1.01
+    else:
+        yl = args.ylim * Rs
+    # ----------------------------------------------------------
+
     fig, ax = plt.subplots(figsize=(args.fig_w, args.fig_h))
     kw = dict(cmap=cmap, vmin=vmin, vmax=vmax, shading="flat",
               edgecolors="face", linewidth=0, antialiased=False, rasterized=True)
-    pm = ax.pcolormesh(X, Y, C, **kw)         # верхняя половина
-    ax.pcolormesh(X, -Y, C, **kw)             # зеркало (осесимметрия)
+    pm = ax.pcolormesh(X, Y, C, **kw)
+    ax.pcolormesh(X, -Y, C, **kw)
     cb = fig.colorbar(pm, ax=ax, label=label, shrink=0.8)
 
-    # сам шар поверх (гладкая окружность)
     ax.add_patch(Circle((0, 0), Rs, facecolor="#444444", edgecolor="k",
                         linewidth=0.8, zorder=5))
 
-    x0, x1 = args.xlim[0] * Rs, args.xlim[1] * Rs
-    yl = args.ylim * Rs
     ax.set_xlim(x0, x1)
     ax.set_ylim(-yl, yl)
     ax.set_aspect("equal", adjustable="box")
+
+    # дальше — без изменений (стрелки/линии тока, подписи, тики)
+
 
     # ---- стрелки / линии тока на равномерной сетке ----
     if name == "mag" or args.stream_on_all:
@@ -196,9 +216,10 @@ def main():
     ap.add_argument("file")
     ap.add_argument("--field", default="mag", choices=["mag", "uz", "ur", "p", "flow"])
     ap.add_argument("--all", action="store_true", help="нарисовать все поля")
-    ap.add_argument("--xlim", nargs=2, type=float, default=[-3.0, 9.0],
-                    help="окно по z в радиусах шара")
-    ap.add_argument("--ylim", type=float, default=3.5, help="окно по r (±) в радиусах шара")
+    ap.add_argument("--xlim", nargs=2, type=float, default=None,
+                    help="окно по z в радиусах шара (по умолчанию — вся область)")
+    ap.add_argument("--ylim", type=float, default=None,
+                    help="окно по r (±) в радиусах шара (по умолчанию — вся область)")
     ap.add_argument("--arrows", nargs=2, type=int, default=[34, 16],
                     help="сколько стрелок по z и по r (редкая равномерная сетка)")
     ap.add_argument("--normalize", action="store_true", help="стрелки одной длины")
@@ -217,7 +238,6 @@ def main():
     d = parse(args.file)
     geo = build_geometry(d)
     Rs = float(geo[1][0])                                  # радиус шара = внутренняя граница
-    # скорость набегающего потока: внешний слой ячеек, где u_z ≈ U (медиана)
     U = float(np.nanmedian(d["uz"][-3:, :]))
     if not np.isfinite(U) or U <= 0:
         U = float(np.nanmax(np.hypot(d["uz"], d["ur"])))
@@ -232,7 +252,6 @@ def main():
             print("сохранено:", path)
     if not args.no_show:
         plt.show()
-
 
 if __name__ == "__main__":
     main()
