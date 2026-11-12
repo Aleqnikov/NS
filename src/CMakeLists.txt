@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.20)
 project(NS)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -33,12 +33,27 @@ endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 add_executable(NS ${SOURCES}
+        main.cpp
+
+        engine/engine.cpp
+        engine/engine.hpp
+        engine/sparse_matrix.hpp
+
         engine/grid/grid_structures.cpp
         engine/grid/grid_structures.hpp
+        engine/grid/grid.cpp
+        engine/grid/grid.hpp
         engine/grid/utils.cpp
         engine/grid/utils.hpp
-        engine/grid/solver.cpp
-        engine/grid/solver.hpp
+
+        engine/solver/GS_solver.cpp
+        engine/solver/GS_solver.hpp
+        engine/solver/iter_ls_solver.hpp
+        engine/solver/ls_solver_interface.hpp
+        engine/solver/parallel_ls_solver.hpp
+
+        engine/solver/util/parallel_for.hpp
+        engine/solver/util/solver_constants.hpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
