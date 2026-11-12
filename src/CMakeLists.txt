@@ -17,6 +17,12 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
 )
+
+list(FILTER SOURCES EXCLUDE REGEX "/\\.venv/")
+list(FILTER SOURCES EXCLUDE REGEX "/build/")
+list(FILTER SOURCES EXCLUDE REGEX "/\\.git/")
+list(FILTER SOURCES EXCLUDE REGEX "/cmake-build-[^/]*/")
+
 list(FILTER SOURCES EXCLUDE REGEX "/cmake-build-[^/]*/")
 
 
