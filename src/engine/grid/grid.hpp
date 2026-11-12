@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-
+#include "../sparse_matrix.hpp"
 
 
 #include "../../model_config.hpp"

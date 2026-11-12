@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
+#include "../sparse_matrix.hpp"
 
-using matrix = std::vector<std::vector<double>>;
 class LsSolverI{
 public:
     LsSolverI() = default;
@@ -12,5 +12,5 @@ public:
      * bs - n матриц 1*m (тоже самое что одна матрица n*m) b[n][m]
      * return Xs - решение. n матриц 1*m (тоже самое что одна матрица n*m) X[n][m]
      */
-    virtual matrix solve(const std::vector<matrix>& As, const matrix& bs) = 0;
+    virtual std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b) = 0;
 };

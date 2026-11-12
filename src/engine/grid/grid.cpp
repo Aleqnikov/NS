@@ -3,9 +3,10 @@
 #include <cmath>
 #include <iostream>
 #include <iomanip>
-#include "solver.hpp"
 #include "utils.hpp"
-
+#include "../solver/ls_solver_interface.hpp"
+#include "../solver/GS_solver.hpp"
+#include <memory>
 
 namespace GU = grid_utils;
 
@@ -51,7 +52,7 @@ Grid::Grid(ModelConfig config) :
 
     this->update_sa_parameters();
 
-    for (std::size_t p = 1; p < 2000; ++p)
+    for (std::size_t p = 1; p < 100; ++p)
     {
     	std::cerr << p <<  "step " << std::endl;
         for (std::size_t i = 1; i < grid_.size() - 1; ++i)
@@ -300,7 +301,7 @@ std::size_t pair_idx_to_uno(std::size_t i, std::size_t j, std::size_t n)
 void Grid::step_speeds_z_update()
 {
 
-SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -443,8 +444,8 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
     }
 
 
-
-    std::vector<double> x = GS(A, b, 1e-3);
+    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
+    std::vector<double> x = solver->solve(A, b);
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -454,7 +455,7 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
 
 void Grid::step_speeds_r_update()
 {
-SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -604,7 +605,8 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
     }
 
 
-    std::vector<double> x = GS(A, b, 1e-3);
+    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
+    std::vector<double> x = solver->solve(A, b);
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -709,7 +711,8 @@ void Grid::step_flows_update()
 
 void Grid::step_pressure_update()
 {
-SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+    SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    
+    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
@@ -779,7 +782,8 @@ SparseMatrix A = make_sparse_matrix((grid_.size()-2)*(grid_[0].size()-2));    st
         }
     }
 
-    std::vector<double> x = GS(A, b, 1e-3);
+    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
+    std::vector<double> x = solver->solve(A, b);
 
     const std::size_t Nth = grid_[0].size() - 2;
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "iter_ls_solver.hpp"
-#include "util/solver_constants.h"
+#include "util/solver_constants.hpp"
 
 class GsSolver : public IterLsSolver {
 public:
@@ -15,11 +15,11 @@ public:
         relDxTol(relDxTol),
         errCheckInter(errCheckInter) {}
 
-    matrix solve(const std::vector<matrix>& A, const matrix& b) override;
+    std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b) override;
 
-    bool solveLS(const matrix& A, const std::vector<double>& b, std::vector<double>& x);
+    bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x);
 
-    double calcBackwardError(const matrix& A, const std::vector<double>& b, std::vector<double>& x);
+    double calcBackwardError(const SparseMatrix& A, const std::vector<double>& b, const std::vector<double>& x);
 
 protected:
 
