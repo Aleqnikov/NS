@@ -3,15 +3,20 @@
 #include <stdexcept>
 #include <iostream>
 
-std::vector<double> GsSolver::solve(const SparseMatrix& A, const std::vector<double>& b) {
-    if (A.size() == 0)
-        throw std::logic_error("A matrix can't empty");
-    
-    std::vector<double> x(A.size());
-    errTol = constants::calcErrorTolerance(A.size());
-    if(!solveLS(A, b, x)) 
-        std::cout << "The matrix did not converge, the final error is: " << calcBackwardError(A, b, x) << std::endl;
-    return x;
+std::vector<double> GsSolver::solve(const SparseMatrix& A,
+									 const std::vector<double>& b) {
+	return solve(A, b, std::vector<double>(A.size(), 0.0));
+}
+
+std::vector<double> GsSolver::solve(const SparseMatrix& A,
+									 const std::vector<double>& b,
+									 std::vector<double> x) {
+
+	errTol = constants::calcErrorTolerance(A.size());
+
+	solveLS(A, b, x);
+
+	return x;
 }
 
 bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) {
@@ -43,7 +48,7 @@ bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std:
         for(int i = 0; i < A.size(); i++) {
             old_xi = x[i];
             sum = b[i];
-            
+
             for(int j = 0; j < A[i].indexes.size(); j++) {
                 if(A[i].indexes[j] == i) continue;
                 sum -= A[i].values[j] * x[A[i].indexes[j]];
@@ -54,14 +59,14 @@ bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std:
                 dx = std::abs(old_xi - x[i]);
                 dx_ind = i;
             }
-            
+
         }
         if (dx < absDxTol + std::abs(x[dx_ind]) * relDxTol)
             checkResidualAcc++;
         k++;
 
         if(checkResidualAcc >= errCheckInter) {
-            if (calcBackwardError(A, b, x) < errTol) 
+            if (calcBackwardError(A, b, x) < errTol)
                 return true;
             checkResidualAcc = 0;
         }

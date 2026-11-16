@@ -6,6 +6,7 @@
 #include "utils.hpp"
 #include "../solver/ls_solver_interface.hpp"
 #include "../solver/GS_solver.hpp"
+#include "CG_solver.hpp"
 #include <memory>
 
 namespace GU = grid_utils;
@@ -444,8 +445,9 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
     }
 
 
-    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
-    std::vector<double> x = solver->solve(A, b);
+
+	GsSolver solver;
+	std::vector<double> x = solver.solve(A, b);
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -605,8 +607,8 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
     }
 
 
-    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
-    std::vector<double> x = solver->solve(A, b);
+	GsSolver solver;
+	std::vector<double> x = solver.solve(A, b);
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -711,9 +713,14 @@ void Grid::step_flows_update()
 
 void Grid::step_pressure_update()
 {
-    SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    
+    SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
     std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
+	std::size_t Nth_x0 = grid_[0].size() - 2;
+	std::vector<double> x0_p((grid_.size() - 2) * Nth_x0);
+	for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+		for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+			x0_p[pair_idx_to_uno(i, j, Nth_x0)] = grid_[i][j].fields.p_P;
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -782,8 +789,8 @@ void Grid::step_pressure_update()
         }
     }
 
-    std::unique_ptr<LsSolverI> solver = std::make_unique<GsSolver>();
-    std::vector<double> x = solver->solve(A, b);
+	CgSolver solver;
+	std::vector<double> x = solver.solve(A, b);
 
     const std::size_t Nth = grid_[0].size() - 2;
 
