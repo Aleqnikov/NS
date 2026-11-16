@@ -53,7 +53,7 @@ Grid::Grid(ModelConfig config) :
 
     this->update_sa_parameters();
 
-    for (std::size_t p = 1; p < 100; ++p)
+    for (std::size_t p = 1; p < 500; ++p)
     {
     	std::cerr << p <<  "step " << std::endl;
         for (std::size_t i = 1; i < grid_.size() - 1; ++i)
@@ -88,10 +88,6 @@ Grid::Grid(ModelConfig config) :
 
 
 
-
-
-
-    this->print();
 
 }
 
@@ -848,32 +844,18 @@ void Grid::step_pressure_update()
         }
     }
 
-    double bmax = 0.0;
-    for (double v : b) bmax = std::max(bmax, std::fabs(v));
-    std::cerr << "mass_imb " << bmax
-              << "  p_stag " << grid_[1][grid_[1].size()-2].fields.p_P << std::endl;
-
-
-
-}
-
-void Grid::print()
-{
-    std::cout << std::scientific;
-    std::cout << std::setprecision(16);
+    double divmax = 0.0;
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
-    {
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
         {
-            std::cout << i << " " << j << std::endl;
-            std::cout << " uzp "  << grid_[i][j].fields.u_z_P << std::endl;
-        	std::cout << " urp " << grid_[i][j].fields.u_r_P << std::endl;
-            std::cout << " sum flows " << grid_[i][j].edge_geometry.F_e - grid_[i][j].edge_geometry.F_w + grid_[i][j].edge_geometry.F_n - grid_[i][j].edge_geometry.F_s << std::endl;
-            std::cout << " p " << grid_[i][j].fields.p_P << std::endl;
-            std::cout << "thetas " << grid_[i][j].geometry.theta_n << " " << grid_[i][j].geometry.theta_s<< std::endl;
-            std::cout << "radii " << grid_[i][j].geometry.R_e << " " << grid_[i][j].geometry.R_w<< std::endl;
+            const Cell& P = grid_[i][j];
+            double div = P.edge_geometry.F_e - P.edge_geometry.F_w
+                       + P.edge_geometry.F_n - P.edge_geometry.F_s;
+            divmax = std::max(divmax, std::fabs(div));
         }
-    }
-}
+    std::cerr << "after p-correction divmax = " << divmax << "\n";
 
+
+
+}
 
