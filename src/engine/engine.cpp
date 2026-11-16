@@ -54,7 +54,7 @@ Engine::Engine(ModelConfig config, std::string output_file) : config_(config), c
             double uz = computation_grid_.grid_[i][j].fields.u_z_P;
             double ur = computation_grid_.grid_[i][j].fields.u_r_P;
 
-            fout << ur << " " << uz << " 0\n";
+            fout << uz << " " << ur << " 0\n";
         }
     }
 
