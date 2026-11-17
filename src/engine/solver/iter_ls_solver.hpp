@@ -4,25 +4,18 @@
 class IterLsSolver : public virtual LsSolverI {
 public:
     IterLsSolver(int maxIterCount) : 
-        residualTolerance(residualTolerance), maxIterCount(maxIterCount) {}
+        maxIterCount(maxIterCount) {}
+protected:
+    virtual bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) = 0;
+    virtual std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) = 0;
 
     std::vector<double> calcResidual(const SparseMatrix& A, const std::vector<double>& b, 
-        const std::vector<double>& x
-    ) {
-        std::vector<double> r;
-        r.reserve(A.size());
-        long double Ax_i;
-        for(int i = 0; i < A.size(); i++) {
-            Ax_i = 0;
-            for(int j = 0; j < A[i].indexes.size(); j++)
-                Ax_i += (long double)A[i].values[j] * (long double)x[A[i].indexes[j]];
-            r.push_back((long double) b[i] - Ax_i);
-        }
-        return r;
-    }
+        const std::vector<double>& x);
 
-protected:
-    //residualTolerance - максимально терпимая невязка. Вычисляется после получения матриц.
-    const double residualTolerance;
+    //так называемый backward error - почитать как работает, я пока так и не понял
+    double calcBackwardError(const SparseMatrix& A, const std::vector<double>& b, const std::vector<double>& x);
+
+    //resTol - максимально терпимая невязка. Вычисляется после получения матриц.
+    double resTol;
     const int maxIterCount;
 };

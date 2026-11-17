@@ -16,18 +16,13 @@ public:
         errCheckInter(errCheckInter) {}
 
     std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b) override;
+    std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) override;
 
-    std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x);
-
-    bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x);
-
-    double calcBackwardError(const SparseMatrix& A, const std::vector<double>& b, const std::vector<double>& x);
-
+    
 protected:
+    bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) override;
 
     const double absDxTol;
     const double relDxTol;
-    //вычисляется непосредствено перед началом решения системы
-    double errTol = 0.0;
     const int errCheckInter;
 };

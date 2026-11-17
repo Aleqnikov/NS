@@ -8,7 +8,7 @@ std::vector<double> GsSolver::solve(const SparseMatrix& A, const std::vector<dou
         throw std::logic_error("A matrix can't empty");
     
     std::vector<double> x(A.size(), 0);
-    errTol = constants::calcErrorTolerance(A.size());
+    resTol = constants::calcErrorTolerance(A.size());
     
     if(!solveLS(A, b, x)) 
         std::cout << "The matrix did not converge, the final error is: " << calcBackwardError(A, b, x) << std::endl;
@@ -19,7 +19,7 @@ std::vector<double> GsSolver::solve(const SparseMatrix& A, const std::vector<dou
     if (A.size() == 0)
         throw std::logic_error("A matrix can't empty");
     
-    errTol = constants::calcErrorTolerance(A.size());
+    resTol = constants::calcErrorTolerance(A.size());
     
     if(!solveLS(A, b, x)) 
         std::cout << "The matrix did not converge, the final error is: " << calcBackwardError(A, b, x) << std::endl;
@@ -72,7 +72,7 @@ bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std:
         k++;
 
         if(checkResidualAcc >= errCheckInter) {
-            if (calcBackwardError(A, b, x) < errTol) 
+            if (calcBackwardError(A, b, x) < resTol) 
                 return true;
             checkResidualAcc = 0;
         }
@@ -80,24 +80,4 @@ bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std:
     return false;
 }
 
-
-//так называемый backward error - почитать как работает, я пока так и не понял
-double GsSolver::calcBackwardError(const SparseMatrix& A, const std::vector<double>& b, const std::vector<double>& x) {
-    std::vector<double> residual = calcResidual(A, b, x);
-    double A_norm = 0;
-    for (const auto& row : A) {
-        double s = 0.0;
-        for (double v : row.values) s += std::abs(v);
-        A_norm = std::max(A_norm, s);
-    }
-    double b_norm = 0, x_norm = 0, r_norm = 0;
-    for (double v : b) b_norm = std::max(b_norm, std::abs(v));
-    for (double v : x) x_norm = std::max(x_norm, std::abs(v));
-    for (double v : residual) r_norm = std::max(r_norm, std::abs(v));
-    double scale = A_norm * x_norm + b_norm;
-
-    //только в случае если A = 0 и b = 0 (вроде как не возможно)
-    if (scale == 0.0) return 0.0;
-    return r_norm / scale;
-}
 
