@@ -53,7 +53,7 @@ Grid::Grid(ModelConfig config) :
 
     this->update_sa_parameters();
 
-    for (std::size_t p = 1; p < 500; ++p)
+    for (std::size_t p = 1; p < 300; ++p)
     {
     	std::cerr << p <<  "step " << std::endl;
         for (std::size_t i = 1; i < grid_.size() - 1; ++i)
@@ -65,22 +65,19 @@ Grid::Grid(ModelConfig config) :
             }
         }
 
-        for (std::size_t i = 1; i < 2; ++i)
-        {
-            this->step_speeds_z_update();
-            this->update_boundary_cells();
 
-            this->step_speeds_r_update();
-            this->update_boundary_cells();
-        }
+        this->step_speeds_z_update();
+        this->update_boundary_cells();
+
+        this->step_speeds_r_update();
+        this->update_boundary_cells();
+
 
         this->step_flows_update();
 
         this->update_boundary_cells();
 
         this->step_pressure_update();
-
-        this->update_boundary_cells();
 
     	this->update_sa_parameters();
     	this->update_boundary_cells();
@@ -843,19 +840,5 @@ void Grid::step_pressure_update()
             P.edge_geometry.F_s += -Theta_s * (pp_P - pp_S);
         }
     }
-
-    double divmax = 0.0;
-    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
-        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
-        {
-            const Cell& P = grid_[i][j];
-            double div = P.edge_geometry.F_e - P.edge_geometry.F_w
-                       + P.edge_geometry.F_n - P.edge_geometry.F_s;
-            divmax = std::max(divmax, std::fabs(div));
-        }
-    std::cerr << "after p-correction divmax = " << divmax << "\n";
-
-
-
 }
 
