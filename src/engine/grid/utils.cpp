@@ -23,7 +23,7 @@ namespace grid_utils
 	 */
 	std::pair<double, double> get_progression_parameters(double v, double nu, double r, double r_border, std::size_t N)
 	{
-		const double d = std::min(nu / v, 0.005 * r);
+	    const double d = std::min(40.0 * nu / v, 0.005 * r);
 
 		auto f = [&](double q)
 		{
