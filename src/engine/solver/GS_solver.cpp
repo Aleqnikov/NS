@@ -7,8 +7,20 @@ std::vector<double> GsSolver::solve(const SparseMatrix& A, const std::vector<dou
     if (A.size() == 0)
         throw std::logic_error("A matrix can't empty");
     
-    std::vector<double> x(A.size());
+    std::vector<double> x(A.size(), 0);
     errTol = constants::calcErrorTolerance(A.size());
+    
+    if(!solveLS(A, b, x)) 
+        std::cout << "The matrix did not converge, the final error is: " << calcBackwardError(A, b, x) << std::endl;
+    return x;
+}
+
+std::vector<double> GsSolver::solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) {
+    if (A.size() == 0)
+        throw std::logic_error("A matrix can't empty");
+    
+    errTol = constants::calcErrorTolerance(A.size());
+    
     if(!solveLS(A, b, x)) 
         std::cout << "The matrix did not converge, the final error is: " << calcBackwardError(A, b, x) << std::endl;
     return x;
@@ -22,7 +34,6 @@ bool GsSolver::solveLS(const SparseMatrix& A, const std::vector<double>& b, std:
         for(int j = 0; j < A[i].indexes.size(); j++) {
             if(A[i].indexes[j] == i) {
                 A_diagonal[i] = A[i].values[j];
-                x[i] = b[i] / A_diagonal[i];
                 break;
             }
         }

@@ -17,6 +17,8 @@ public:
 
     std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b) override;
 
+    std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x);
+
     bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x);
 
     double calcBackwardError(const SparseMatrix& A, const std::vector<double>& b, const std::vector<double>& x);
