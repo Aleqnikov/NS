@@ -14,4 +14,15 @@ public:
     std::vector<double> solve(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) override;
 protected:
     bool solveLS(const SparseMatrix& A, const std::vector<double>& b, std::vector<double>& x) override;
+
+    struct PriCondLC0 {
+        //границы строк, если идти по матрице сначала по первой строке от начала до конца, потом по второй ...
+        std::vector<int> row_bounds;
+        //колонки cols[0] хранит в какой колонке находиться значение val[0]
+        std::vector<int> cols;
+        std::vector<double> vals;
+        
+        void build(const SparseMatrix& A);
+        void precondition(const std::vector<double>& r, std::vector<double>& z) const;
+    };
 };
