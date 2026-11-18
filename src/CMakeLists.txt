@@ -56,6 +56,7 @@ add_executable(NS ${SOURCES}
 
         engine/solver/util/parallel_for.hpp
         engine/solver/util/solver_constants.hpp
+        engine/solver/util/util.hpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
