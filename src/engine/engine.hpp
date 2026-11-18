@@ -17,7 +17,7 @@ using ProgramOutput = std::pair<PressureSpace, VelocitySpace>;
 class Engine
 {
 public:
-    Engine(ModelConfig config);
+    Engine(ModelConfig config, std::string output_file);
     void run();
     ProgramOutput get_results();
 
