@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-
+#include "../sparse_matrix.hpp"
 
 
 #include "../../model_config.hpp"
@@ -46,7 +46,7 @@ public:
 	void step_speeds_r_update();
     void step_flows_update();
     void step_pressure_update();
-    void print();
+
 
     std::pair<int, int> get_grid_dimensions();
 
