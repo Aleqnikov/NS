@@ -81,6 +81,12 @@ Grid::Grid(ModelConfig config) :
 
     	this->update_sa_parameters();
     	this->update_boundary_cells();
+
+    	this->step_sa_update();
+    	this->update_boundary_cells();
+    	this->update_sa_parameters();
+    	this->update_boundary_cells();
+
     }
 
 
@@ -295,7 +301,8 @@ std::size_t pair_idx_to_uno(std::size_t i, std::size_t j, std::size_t n)
 void Grid::step_speeds_z_update()
 {
 
-SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+	SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+	std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -450,7 +457,8 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
 
 void Grid::step_speeds_r_update()
 {
-SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+	SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+	std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -844,6 +852,10 @@ void Grid::step_pressure_update()
 
 void Grid::step_sa_update()
 {
+
+	SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+	std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+
 	for (std::size_t i = 1; i < grid_.size() - 1; ++i)
 	{
 		for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
@@ -877,11 +889,38 @@ void Grid::step_sa_update()
 
 			double mod_grad_sq = std::pow((E.fields.nut_P - W.fields.nut_P)/(E.geometry.R_P - W.geometry.R_P) , 2) + std::pow(1 / P.geometry.R_P * (N.fields.nut_P - S.fields.nut_P)/(N.geometry.theta_P - S.geometry.theta_P), 2);
 
-			double b_p = P.geometry.V_P * (config_.c_b_1 *  P.sa_params.S_tilda_P * P.fields.nut_P + config_.c_b_2 / config_.sigma * mod_grad_sq);
+			double b_P = P.geometry.V_P * (config_.c_b_1 *  P.sa_params.S_tilda_P * P.fields.nut_P + config_.c_b_2 / config_.sigma * mod_grad_sq);
+
+			const std::size_t Nth_ = grid_[0].size() - 2;
+			std::size_t row = pair_idx_to_uno(i, j, Nth_);
+
+			b[row] = b_P;
+			A[row].add(row, a_P);
+
+			if (!E.is_boundary)
+			{
+				A[row].add(pair_idx_to_uno(i + 1, j, Nth_), -a_E);
+			}
+			else if (P.geometry.theta_P <= M_PI / 2.0)
+			{
+				b[row] += a_E ;
+			}
+			if (!W.is_boundary) A[row].add(pair_idx_to_uno(i - 1, j, Nth_), -a_W);
+			if (!N.is_boundary) A[row].add(pair_idx_to_uno(i, j + 1, Nth_), -a_N);
+			else                b[row] -= a_N;
+			if (!S.is_boundary) A[row].add(pair_idx_to_uno(i, j - 1, Nth_), -a_S);
+			else                b[row] -= a_S ;
 
 
 		}
 	}
+
+	GsSolver solver;
+	std::vector<double> x = solver.solve(A, b);
+
+	for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+		for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+			grid_[i][j].fields.nut_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
 
 }
 
