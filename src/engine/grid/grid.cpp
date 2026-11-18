@@ -842,3 +842,47 @@ void Grid::step_pressure_update()
     }
 }
 
+void Grid::step_sa_update()
+{
+	for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+	{
+		for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+		{
+			Cell& P = grid_[i][j];
+			Cell& E = grid_[i + 1][j];
+			Cell& W = grid_[i - 1][j];
+			Cell& N = grid_[i][j + 1];
+			Cell& S = grid_[i][j - 1];
+
+			double Gamma_e = 0.5 * (P.sa_params.gamma_P + E.sa_params.gamma_P);
+			double Gamma_n = 0.5 * (P.sa_params.gamma_P + N.sa_params.gamma_P);
+			double Gamma_w = 0.5 * (P.sa_params.gamma_P + W.sa_params.gamma_P);
+			double Gamma_s = 0.5 * (P.sa_params.gamma_P + S.sa_params.gamma_P);
+
+
+
+			double D_e = (P.edge_geometry.A_e * Gamma_e) / (config_.sigma * (E.geometry.R_P - P.geometry.R_P));
+			double D_w = (P.edge_geometry.A_w * Gamma_w) / (config_.sigma * (P.geometry.R_P) - W.geometry.R_P);
+			double D_n = (P.edge_geometry.A_n * Gamma_n) / (config_.sigma * P.geometry.R_P * (N.geometry.theta_P - P.geometry.theta_P));
+			double D_s = (P.edge_geometry.A_s * Gamma_s) / (config_.sigma * P.geometry.R_P  * (P.geometry.theta_P - S.geometry.theta_P));
+
+			double a_E = D_e + std::max(-P.edge_geometry.F_e, 0.0);
+			double a_W = D_w + std::max(P.edge_geometry.F_w, 0.0);
+			double a_N = D_n + std::max(-P.edge_geometry.F_n, 0.0);
+			double a_S = D_s + std::max(P.edge_geometry.F_s, 0.0);
+
+			double right = P.geometry.V_P * config_.c_w_1 * P.sa_params.f_w_P * (P.fields.nut_P) / (P.geometry.d_P * P.geometry.d_P);
+
+			double a_P = a_E + a_W + a_N + a_S + right;
+
+			double mod_grad_sq = std::pow((E.fields.nut_P - W.fields.nut_P)/(E.geometry.R_P - W.geometry.R_P) , 2) + std::pow(1 / P.geometry.R_P * (N.fields.nut_P - S.fields.nut_P)/(N.geometry.theta_P - S.geometry.theta_P), 2);
+
+			double b_p = P.geometry.V_P * (config_.c_b_1 *  P.sa_params.S_tilda_P * P.fields.nut_P + config_.c_b_2 / config_.sigma * mod_grad_sq);
+
+
+		}
+	}
+
+}
+
+

@@ -19,7 +19,8 @@ struct ModelConfig
     double k = 0.41;
     double c_w_2 = 0.3;
     double c_w_3 = 2;
-    double sigma  = 0.6666666;
+    double sigma  = 2 / 3;
+	double c_w_1 = c_w_1 / (k * k) + (1 + c_b_2)/(sigma);
 
 
     // Параметры релаксации для подсчета давления
