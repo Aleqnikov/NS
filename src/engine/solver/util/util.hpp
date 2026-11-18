@@ -27,7 +27,7 @@ namespace util
     }
 
     std::vector<double> multiply_sparse(const SparseMatrix& A, const std::vector<double>& x) {
-        std::vector<double> res(A.size());
+        std::vector<double> res;
         res.reserve(A.size());
 
         long double sum;
