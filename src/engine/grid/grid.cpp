@@ -897,19 +897,29 @@ void Grid::step_sa_update()
 			b[row] = b_P;
 			A[row].add(row, a_P);
 
+
 			if (!E.is_boundary)
-			{
 				A[row].add(pair_idx_to_uno(i + 1, j, Nth_), -a_E);
-			}
-			else if (P.geometry.theta_P <= M_PI / 2.0)
-			{
-				b[row] += a_E ;
-			}
-			if (!W.is_boundary) A[row].add(pair_idx_to_uno(i - 1, j, Nth_), -a_W);
-			if (!N.is_boundary) A[row].add(pair_idx_to_uno(i, j + 1, Nth_), -a_N);
-			else                b[row] -= a_N;
-			if (!S.is_boundary) A[row].add(pair_idx_to_uno(i, j - 1, Nth_), -a_S);
-			else                b[row] -= a_S ;
+			else if (P.geometry.theta_P > M_PI / 2.0)
+				b[row] += a_E * (P.fields.nut_P - 6.0 * config_.nu);
+			else
+				b[row] += a_E * P.fields.nut_P;
+
+			if (!W.is_boundary)
+				A[row].add(pair_idx_to_uno(i - 1, j, Nth_), -a_W);
+			else
+				A[row].add(row, a_W);
+
+
+			if (!N.is_boundary)
+				A[row].add(pair_idx_to_uno(i, j + 1, Nth_), -a_N);
+			else
+				b[row] += a_N * P.fields.nut_P;
+
+			if (!S.is_boundary)
+				A[row].add(pair_idx_to_uno(i, j - 1, Nth_), -a_S);
+			else
+				b[row] += a_S * P.fields.nut_P;
 
 
 		}
