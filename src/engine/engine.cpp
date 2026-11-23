@@ -46,6 +46,16 @@ Engine::Engine(ModelConfig config, std::string output_file) : config_(config), c
         }
     }
 
+	fout << "SCALARS Nut double 1\n";
+	fout << "LOOKUP_TABLE default\n";
+	for (std::size_t i = 1; i < n - 1; i++)
+	{
+		for (std::size_t j = 1; j < m - 1; j++)
+		{
+			fout << computation_grid_.grid_[i][j].fields.nut_P << "\n";
+		}
+	}
+
     fout << "\nVECTORS Velocity double\n";
     for (std::size_t i = 1; i < n - 1; i++)
     {
