@@ -4,9 +4,9 @@
 #include <iostream>
 #include <iomanip>
 #include "utils.hpp"
-#include "../solver/ls_solver_interface.hpp"
-#include "../solver/GS_solver.hpp"
-#include "../solver/CG_solver.hpp"
+#include "ls_solver_interface.hpp"
+#include "GS_solver.hpp"
+#include "CG_solver.hpp"
 #include <memory>
 
 namespace GU = grid_utils;
@@ -17,7 +17,7 @@ Grid::Grid(ModelConfig config) :
 {
     double height = config.radius * 40;
 
-    int N_R_max = 250, N_R_min = 70;
+    int N_R_max = 200, N_R_min = 75;
     int N_theta_max = 200, N_theta_min =25;
 
     int N_R_current  = N_R_min + config.density * (N_R_max - N_R_min);
@@ -53,7 +53,7 @@ Grid::Grid(ModelConfig config) :
 
     this->update_sa_parameters();
 
-    for (std::size_t p = 1; p < 300; ++p)
+    for (std::size_t p = 1; p < 500; ++p)
     {
     	std::cerr << p <<  "step " << std::endl;
         for (std::size_t i = 1; i < grid_.size() - 1; ++i)
@@ -81,6 +81,12 @@ Grid::Grid(ModelConfig config) :
 
     	this->update_sa_parameters();
     	this->update_boundary_cells();
+
+    	this->step_sa_update();
+    	this->update_boundary_cells();
+    	this->update_sa_parameters();
+    	this->update_boundary_cells();
+
     }
 
 
@@ -139,7 +145,8 @@ void Grid::Cell::update_SA_parameters(Cell E, Cell W, Cell N, Cell S, ModelConfi
 
     sa_params.Omega_P = std::fabs(du_zdr - du_r_d_theta);
 
-    sa_params.S_tilda_P = sa_params.Omega_P + fields.nut_P/(config.k * config.k * (geometry.d_P * geometry.d_P)) * sa_params.f_v2_P;
+	double S_bar = sa_params.Omega_P + fields.nut_P/(config.k*config.k*geometry.d_P*geometry.d_P) * sa_params.f_v2_P;
+	sa_params.S_tilda_P = std::max(S_bar, 0.03 * sa_params.Omega_P + 1e-12);
 
     sa_params.r_sa_P = std::min(10., fields.nut_P/(config.k * config.k * (geometry.d_P * geometry.d_P) * sa_params.S_tilda_P));
     sa_params.g_P = sa_params.r_sa_P + config.c_w_2 * (std::pow(sa_params.r_sa_P, 6) - sa_params.r_sa_P);
@@ -295,7 +302,8 @@ std::size_t pair_idx_to_uno(std::size_t i, std::size_t j, std::size_t n)
 void Grid::step_speeds_z_update()
 {
 
-SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+	SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+	std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -322,8 +330,9 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
             double beta_z_s = - 2 * P.edge_geometry.S_z_s * std::sin(P.geometry.theta_s) + P.edge_geometry.S_r_s * std::cos(P.geometry.theta_s);
 
             double nu_e = (E.is_boundary ? P.sa_params.nu_eff_P : (E.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
-            double nu_w = (W.is_boundary ? P.sa_params.nu_eff_P : (W.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
-            double nu_s = (S.is_boundary ? P.sa_params.nu_eff_P : (S.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+        	double nu_w = W.is_boundary
+				? config_.nu
+				: 0.5 * (W.sa_params.nu_eff_P + P.sa_params.nu_eff_P);            double nu_s = (S.is_boundary ? P.sa_params.nu_eff_P : (S.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
             double nu_n = (N.is_boundary ? P.sa_params.nu_eff_P : (N.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
 
             double D_e = (nu_e*alpha_z_e)/(E.geometry.R_P - P.geometry.R_P);
@@ -395,8 +404,7 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
 
 
             double rho_z_e = nu_e * (beta_z_e * 1/P.geometry.R_e * du_zdtheta_e + P.edge_geometry.S_r_e * du_rdz_e);
-            double rho_z_w = nu_w * (beta_z_w * 1/P.geometry.R_w * du_zdtheta_w + P.edge_geometry.S_r_w * du_rdz_w);
-
+        	double rho_z_w = nu_w * (beta_z_w * 1/P.geometry.R_w * du_zdtheta_w + P.edge_geometry.S_r_w * du_rdz_w);
             double rho_z_n = nu_n * (alpha_z_n * du_zdR_n + P.edge_geometry.S_r_n * du_rdz_n);
             double rho_z_s = nu_s * (alpha_z_s * du_zdR_s + P.edge_geometry.S_r_s * du_rdz_s);
 
@@ -409,8 +417,8 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
             const double au = config_.alpha_u;
             const std::size_t Nth_ = grid_[0].size() - 2;
 
-            double diag = a_P;
-            if (W.is_boundary) diag += a_W;     // стенка: ghost = -u_P
+        	double diag = a_P;
+        	if (W.is_boundary) diag += a_W;
 
             double a_P_rel = diag / au;
 
@@ -444,13 +452,13 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
-            grid_[i][j].fields.u_z_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
-
+        	grid_[i][j].fields.u_z_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
 }
 
 void Grid::step_speeds_r_update()
 {
-SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+	SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+	std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
     {
@@ -477,8 +485,8 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
             double beta_r_s = - P.edge_geometry.S_z_s * std::sin(P.geometry.theta_s) + 2 * P.edge_geometry.S_r_s * std::cos(P.geometry.theta_s);
 
             double nu_e = (E.is_boundary ? P.sa_params.nu_eff_P : (E.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
-            double nu_w = (W.is_boundary ? P.sa_params.nu_eff_P : (W.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
-            double nu_s = (S.is_boundary ? P.sa_params.nu_eff_P : (S.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+        	double nu_w = (W.is_boundary ? P.sa_params.nu_eff_P : (W.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
+        	double nu_s = (S.is_boundary ? P.sa_params.nu_eff_P : (S.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
             double nu_n = (N.is_boundary ? P.sa_params.nu_eff_P : (N.sa_params.nu_eff_P + P.sa_params.nu_eff_P) / 2);
 
             double D_e = (nu_e*alpha_r_e)/(E.geometry.R_P - P.geometry.R_P);
@@ -554,7 +562,7 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
 
 
             double rho_r_e = nu_e * (beta_r_e * 1/P.geometry.R_e * du_rdtheta_e + P.edge_geometry.S_z_e * du_zdr_e);
-            double rho_r_w = nu_w * (beta_r_w * 1/P.geometry.R_w * du_rdtheta_w + P.edge_geometry.S_z_w * du_zdr_w);
+        	double rho_r_w = nu_w * (beta_r_w * 1/P.geometry.R_w * du_rdtheta_w + P.edge_geometry.S_z_w * du_zdr_w);
 
             double rho_r_n = nu_n * (alpha_r_n * du_rdR_n + P.edge_geometry.S_z_n * du_zdr_n);
             double rho_r_s = nu_s * (alpha_r_s * du_rdR_s + P.edge_geometry.S_z_s * du_zdr_s);
@@ -568,8 +576,8 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
             const double au = config_.alpha_u;
             const std::size_t Nth_ = grid_[0].size() - 2;
 
-            double diag = a_P;
-            if (W.is_boundary) diag += a_W;
+        	double diag = a_P;
+        	if (W.is_boundary) diag += a_W;
 
             double a_P_rel = diag / au;
 
@@ -581,14 +589,14 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
             b[row] = b_P + (1.0 - au) / au * diag * P.fields.u_r_P;
             A[row].add(row, a_P_rel);
 
-            if (!E.is_boundary)
-            {
-                A[row].add(pair_idx_to_uno(i + 1, j, Nth_), -a_E);
-            }
-            else if (P.geometry.theta_P <= M_PI / 2.0)
-            {
-                b[row] += a_E * P.fields.u_r_P;
-            }
+        	if (!E.is_boundary)
+        	{
+        		A[row].add(pair_idx_to_uno(i + 1, j, Nth_), -a_E);
+        	}
+        	else if (P.geometry.theta_P <= M_PI / 2.0)
+        	{
+        		b[row] += a_E * P.fields.u_r_P;
+        	}
             if (!W.is_boundary) A[row].add(pair_idx_to_uno(i - 1, j, Nth_), -a_W);
             if (!N.is_boundary) A[row].add(pair_idx_to_uno(i, j + 1, Nth_), -a_N);
             else                b[row] -= a_N * P.fields.u_r_P;
@@ -605,7 +613,7 @@ SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));    std::vec
 
     for (std::size_t i = 1; i < grid_.size() - 1; ++i)
         for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
-            grid_[i][j].fields.u_r_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
+        	grid_[i][j].fields.u_r_P = x[pair_idx_to_uno(i, j, grid_[0].size() - 2)];
 
 }
 
@@ -677,27 +685,28 @@ void Grid::step_flows_update()
                      + Sr * 0.5 * (A.fields.u_r_prev + B.fields.u_r_prev);
             };
 
-            grid_[i][j].edge_geometry.F_e = (!E.is_boundary)
-                ? P.edge_geometry.S_z_e * u_z_e + P.edge_geometry.S_r_e * u_r_e
-                  + (1.0 - au) * (P.edge_geometry.F_e - lin_old(P, E, P.edge_geometry.S_z_e, P.edge_geometry.S_r_e))
-                : ((P.geometry.theta_P > M_PI / 2.0)
-                    ? config_.speed * P.edge_geometry.S_z_e
-                    : P.edge_geometry.S_z_e * P.fields.u_z_P + P.edge_geometry.S_r_e * P.fields.u_r_P);
+        	grid_[i][j].edge_geometry.F_e = (!E.is_boundary)
+			   ? P.edge_geometry.S_z_e * u_z_e + P.edge_geometry.S_r_e * u_r_e
+				 + (1.0 - au) * (P.edge_geometry.F_e - lin_old(P, E, P.edge_geometry.S_z_e, P.edge_geometry.S_r_e))
+			   : ((P.geometry.theta_P > M_PI / 2.0)
+				   ? config_.speed * P.edge_geometry.S_z_e
+				   : P.edge_geometry.S_z_e * P.fields.u_z_P + P.edge_geometry.S_r_e * P.fields.u_r_P);
 
-            grid_[i][j].edge_geometry.F_w = (!W.is_boundary)
-                ? P.edge_geometry.S_z_w * u_z_w + P.edge_geometry.S_r_w * u_r_w
-                  + (1.0 - au) * (P.edge_geometry.F_w - lin_old(P, W, P.edge_geometry.S_z_w, P.edge_geometry.S_r_w))
-                : 0.0;
+        	grid_[i][j].edge_geometry.F_w = (!W.is_boundary)
+				? P.edge_geometry.S_z_w * u_z_w + P.edge_geometry.S_r_w * u_r_w
+				  + (1.0 - au) * (P.edge_geometry.F_w - lin_old(P, W, P.edge_geometry.S_z_w, P.edge_geometry.S_r_w))
+				: 0.0;
 
-            grid_[i][j].edge_geometry.F_n = (!N.is_boundary)
-                ? P.edge_geometry.S_z_n * u_z_n + P.edge_geometry.S_r_n * u_r_n
-                  + (1.0 - au) * (P.edge_geometry.F_n - lin_old(P, N, P.edge_geometry.S_z_n, P.edge_geometry.S_r_n))
-                : 0.0;
 
-            grid_[i][j].edge_geometry.F_s = (!S.is_boundary)
-                ? P.edge_geometry.S_z_s * u_z_s + P.edge_geometry.S_r_s * u_r_s
-                  + (1.0 - au) * (P.edge_geometry.F_s - lin_old(P, S, P.edge_geometry.S_z_s, P.edge_geometry.S_r_s))
-                : 0.0;
+        	grid_[i][j].edge_geometry.F_n = (!N.is_boundary)
+				? P.edge_geometry.S_z_n * u_z_n + P.edge_geometry.S_r_n * u_r_n
+				  + (1.0 - au) * (P.edge_geometry.F_n - lin_old(P, N, P.edge_geometry.S_z_n, P.edge_geometry.S_r_n))
+				: 0.0;
+
+        	grid_[i][j].edge_geometry.F_s = (!S.is_boundary)
+				? P.edge_geometry.S_z_s * u_z_s + P.edge_geometry.S_r_s * u_r_s
+				  + (1.0 - au) * (P.edge_geometry.F_s - lin_old(P, S, P.edge_geometry.S_z_s, P.edge_geometry.S_r_s))
+				: 0.0;
 
         }
     }
@@ -758,9 +767,9 @@ void Grid::step_pressure_update()
             double a_N = Theta_n;
             double a_S = Theta_s;
 
-            if (E.is_boundary) {
-                if (P.geometry.theta_P > M_PI/2.0) a_E = 0.0;
-            }
+        	if (E.is_boundary) {
+        		if (P.geometry.theta_P > M_PI/2.0) a_E = 0.0;
+        	}
             if (W.is_boundary) a_W = 0.0;
             if (N.is_boundary) a_N = 0.0;
             if (S.is_boundary) a_S = 0.0;
@@ -801,7 +810,7 @@ void Grid::step_pressure_update()
 
             double pp_P = x[k];
 
-            double pp_E = E.is_boundary ? (P.geometry.theta_P > M_PI / 2.0 ? pp_P : 0.0)  : x[pair_idx_to_uno(i + 1, j, Nth)];
+        	double pp_E = E.is_boundary ? (P.geometry.theta_P > M_PI / 2.0 ? pp_P : 0.0)  : x[pair_idx_to_uno(i + 1, j, Nth)];
             double pp_W = W.is_boundary ? pp_P : x[pair_idx_to_uno(i - 1, j, Nth)];
             double pp_N = N.is_boundary ? pp_P : x[pair_idx_to_uno(i, j + 1, Nth)];
             double pp_S = S.is_boundary ? pp_P : x[pair_idx_to_uno(i, j - 1, Nth)];
@@ -842,3 +851,98 @@ void Grid::step_pressure_update()
     }
 }
 
+void Grid::step_sa_update()
+{
+    SparseMatrix A = SparseMatrix((grid_.size()-2)*(grid_[0].size()-2));
+    std::vector<double> b((grid_.size()-2)*(grid_[0].size()-2));
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+    {
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j)
+        {
+            Cell& P = grid_[i][j];
+            Cell& E = grid_[i + 1][j];
+            Cell& W = grid_[i - 1][j];
+            Cell& N = grid_[i][j + 1];
+            Cell& S = grid_[i][j - 1];
+
+            double Gamma_e = E.is_boundary ? P.sa_params.gamma_P : 0.5 * (P.sa_params.gamma_P + E.sa_params.gamma_P);
+            double Gamma_n = N.is_boundary ? P.sa_params.gamma_P : 0.5 * (P.sa_params.gamma_P + N.sa_params.gamma_P);
+            double Gamma_w = W.is_boundary ? P.sa_params.gamma_P : 0.5 * (P.sa_params.gamma_P + W.sa_params.gamma_P);
+            double Gamma_s = S.is_boundary ? P.sa_params.gamma_P : 0.5 * (P.sa_params.gamma_P + S.sa_params.gamma_P);
+
+            double D_e = (P.edge_geometry.A_e * Gamma_e) / (config_.sigma * (E.geometry.R_P - P.geometry.R_P));
+            double D_w = (P.edge_geometry.A_w * Gamma_w) / (config_.sigma * (P.geometry.R_P - W.geometry.R_P));
+            double D_n = (P.edge_geometry.A_n * Gamma_n) / (config_.sigma * P.geometry.R_P * (N.geometry.theta_P - P.geometry.theta_P));
+            double D_s = (P.edge_geometry.A_s * Gamma_s) / (config_.sigma * P.geometry.R_P * (P.geometry.theta_P - S.geometry.theta_P));
+
+            double a_E = D_e + std::max(-P.edge_geometry.F_e, 0.0);
+            double a_W = D_w + std::max(P.edge_geometry.F_w, 0.0);
+            double a_N = D_n + std::max(-P.edge_geometry.F_n, 0.0);
+            double a_S = D_s + std::max(P.edge_geometry.F_s, 0.0);
+
+            double right = P.geometry.V_P * config_.c_w_1 * P.sa_params.f_w_P * (P.fields.nut_P) / (P.geometry.d_P * P.geometry.d_P);
+
+            double a_P = a_E + a_W + a_N + a_S + right;
+
+            double mod_grad_sq = std::pow((E.fields.nut_P - W.fields.nut_P)/(E.geometry.R_P - W.geometry.R_P), 2)
+                               + std::pow(1 / P.geometry.R_P * (N.fields.nut_P - S.fields.nut_P)/(N.geometry.theta_P - S.geometry.theta_P), 2);
+
+            double b_P = P.geometry.V_P * (config_.c_b_1 * P.sa_params.S_tilda_P * P.fields.nut_P + config_.c_b_2 / config_.sigma * mod_grad_sq);
+
+            const double asa = config_.alpha_sa;
+            const std::size_t Nth_ = grid_[0].size() - 2;
+            std::size_t row = pair_idx_to_uno(i, j, Nth_);
+
+        	double diag = a_P;
+
+        	if (W.is_boundary)
+        		diag += a_W;
+
+        	if (E.is_boundary && P.geometry.theta_P > M_PI / 2.0)
+        		diag += a_E;
+
+        	double a_P_rel = diag / asa;
+
+        	b[row] = b_P + (1.0 - asa) / asa * diag * P.fields.nut_P;
+
+        	A[row].add(row, a_P_rel);
+
+        	if (!E.is_boundary)
+        	{
+        		A[row].add(pair_idx_to_uno(i + 1, j, Nth_), -a_E);
+        	}
+        	else if (P.geometry.theta_P > M_PI / 2.0)
+        	{
+        		b[row] += 6.0 * a_E * config_.nu;
+        	}
+        	else
+        	{
+        		b[row] += a_E * P.fields.nut_P;
+        	}
+
+        	if (!W.is_boundary)
+        		A[row].add(pair_idx_to_uno(i - 1, j, Nth_), -a_W);
+
+        	if (!N.is_boundary)
+        		A[row].add(pair_idx_to_uno(i, j + 1, Nth_), -a_N);
+        	else
+        		b[row] += a_N * P.fields.nut_P;
+
+        	if (!S.is_boundary)
+        		A[row].add(pair_idx_to_uno(i, j - 1, Nth_), -a_S);
+        	else
+        		b[row] += a_S * P.fields.nut_P;
+        }
+    }
+
+    GsSolver solver;
+    std::vector<double> x = solver.solve(A, b);
+
+
+
+    for (std::size_t i = 1; i < grid_.size() - 1; ++i)
+        for (std::size_t j = 1; j < grid_[i].size() - 1; ++j) {
+        	grid_[i][j].fields.nut_P = std::max(x[pair_idx_to_uno(i, j, grid_[0].size() - 2)], 1e-12);
+        }
+}

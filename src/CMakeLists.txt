@@ -46,8 +46,6 @@ add_executable(NS ${SOURCES}
         engine/grid/utils.cpp
         engine/grid/utils.hpp
 
-        engine/solver/GS_solver.cpp
-        engine/solver/GS_solver.hpp
         engine/solver/iter_ls_solver.hpp
         engine/solver/ls_solver_interface.hpp
         engine/solver/parallel_ls_solver.hpp

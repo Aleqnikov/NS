@@ -17,7 +17,7 @@ struct SA_params
     double S_tilda_P{};
     double r_sa_P{};
     double g_P{};
-    double f_w_P{};
+	double f_w_P{};
 };
 
 struct Fields
