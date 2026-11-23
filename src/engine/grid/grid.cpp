@@ -791,7 +791,7 @@ void Grid::step_pressure_update()
         }
     }
 
-	CgSolver solver;
+	CGSolver solver;
 	std::vector<double> x = solver.solve(A, b);
 
     const std::size_t Nth = grid_[0].size() - 2;

@@ -49,9 +49,12 @@ add_executable(NS ${SOURCES}
         engine/solver/iter_ls_solver.hpp
         engine/solver/ls_solver_interface.hpp
         engine/solver/parallel_ls_solver.hpp
+        engine/solver/CG_solver.hpp
+        engine/solver/CG_solver.cpp
 
         engine/solver/util/parallel_for.hpp
         engine/solver/util/solver_constants.hpp
+        engine/solver/util/util.hpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

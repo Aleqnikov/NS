@@ -56,6 +56,7 @@ Engine::Engine(ModelConfig config, std::string output_file) : config_(config), c
 		}
 	}
 
+
     fout << "\nVECTORS Velocity double\n";
     for (std::size_t i = 1; i < n - 1; i++)
     {
