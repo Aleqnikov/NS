@@ -32,8 +32,8 @@ public:
        	Fields fields;
        	CellGeometry geometry;
 		EdgeGeometry edge_geometry;
-        SA_params sa_params;
-        SpeedResults speed_results;
+        SA_params sa_params{};
+        SpeedResults speed_results{};
     };
 
     Grid(ModelConfig config);
